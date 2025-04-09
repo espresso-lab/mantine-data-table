@@ -24,7 +24,7 @@ import {
 } from "mantine-datatable";
 import { sortBy } from "lodash";
 import { DatesRangeValue } from "@mantine/dates";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 
@@ -71,6 +71,7 @@ export interface DataTableProps<T extends BaseEntity> {
   title?: string | React.ReactNode;
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
+  queryClient: QueryClient;
   apiPath: string;
   filters?: Filter[];
   buttons?: React.ReactNode[];
@@ -93,6 +94,7 @@ export function DataTable<T extends BaseEntity>({
   queryKey,
   connectedQueryKeys,
   apiPath,
+  queryClient,
   buttons,
   fields,
   selection,
@@ -111,7 +113,6 @@ export function DataTable<T extends BaseEntity>({
     refetch,
   } = useGetAll<T>(apiPath, queryKey);
   const [data, setData] = useState<T[]>([]);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!allData || !Array.isArray(allData)) return;
@@ -204,7 +205,7 @@ export function DataTable<T extends BaseEntity>({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Group gap="xs" justify={title ? "space-between" : "end"} align="center">
         {title &&
           (typeof title === "string" ? (
@@ -370,6 +371,6 @@ export function DataTable<T extends BaseEntity>({
           steps={steps}
         />
       </Modal>
-    </>
+    </QueryClientProvider>
   );
 }
