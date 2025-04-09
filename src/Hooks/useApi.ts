@@ -1,9 +1,7 @@
 import {
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
-  UseQueryOptions,
 } from "@tanstack/react-query";
 import {getIdToken} from "@espresso-lab/mantine-cognito";
 
@@ -157,19 +155,6 @@ export function useGetOne<T extends BaseEntity>(
     queryFn: () => getOne<T>(apiPath, id!),
   });}
 
-export function useGetMany<T extends BaseEntity>(
-    apiPath: string,
-    queryKey: Array<string | number>,
-    ids: string[] | number[],
-) {
-  return useQueries({
-    queries: ids.map<UseQueryOptions<T>>((id) => ({
-      queryKey: [...queryKey.map((k) => k.toString()), String(id.toString)],
-      queryFn: () => getOne<T>(apiPath, id),
-    })),
-  });
-}
-
 export function useGetAll<T extends BaseEntity>(
     apiPath: string,
     queryKey: Array<string | number>,
@@ -190,11 +175,10 @@ export function useAddOne<T extends BaseEntity>(
   return useMutation<T, Error, Omit<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item),
-    onSuccess(item) {
-      queryClient.setQueryData<T[]>(
-          [...queryKey.map((k) => k.toString()), String(item.id)],
-          (items) => items?.concat(item),
-      );
+      onSettled() {
+          queryClient.invalidateQueries({
+              queryKey: [...queryKey.map((k) => k.toString())],
+          });
     },
   });
 }
@@ -207,24 +191,15 @@ export function useUpdateOne<T extends BaseEntity>(
   return useMutation<T, Error, AtLeast<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item: AtLeast<T, "id">) => updateOne<T>(apiPath, item),
-    onSuccess(newItem: T) {
-      queryClient.setQueryData<T[]>(
-          [...queryKey.map((k) => k.toString()), newItem.id],
-          (items) =>
-              items?.map((item) =>
-                  item.id !== newItem.id
-                      ? item
-                      : {
-                        ...item,
-                        ...newItem,
-                      },
-              ),
-      );
+      onSettled() {
+        queryClient.invalidateQueries({
+            queryKey: [...queryKey.map((k) => k.toString())],
+        });
     },
   });
 }
 
-export function useDeleteOne<T extends BaseEntity>(
+export function useDeleteOne(
     apiPath: string,
     queryKey: Array<string | number>,
 ) {
@@ -232,11 +207,10 @@ export function useDeleteOne<T extends BaseEntity>(
   return useMutation<void, Error, string | number>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (id) => deleteOne(apiPath, id),
-    onSuccess(_, id) {
-      queryClient.setQueryData<T[]>(
-          [...queryKey.map((k) => k.toString())],
-          (items) => items?.filter((item) => item.id !== id),
-      );
+    onSettled() {
+        queryClient.invalidateQueries({
+            queryKey: [...queryKey.map((k) => k.toString())],
+        });
     },
   });
 }
