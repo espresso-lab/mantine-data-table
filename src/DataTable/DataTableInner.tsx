@@ -24,9 +24,9 @@ import {
 } from "mantine-datatable";
 import { sortBy } from "lodash";
 import { DatesRangeValue } from "@mantine/dates";
-import { QueryClient } from "@tanstack/react-query";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
+import { useDataTable } from "../Hooks/useDataTable.ts";
 
 interface Filter {
   id: string | number;
@@ -71,7 +71,6 @@ export interface DataTableProps<T extends BaseEntity> {
   title?: string | React.ReactNode;
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
-  queryClient: QueryClient;
   apiPath: string;
   filters?: Filter[];
   buttons?: React.ReactNode[];
@@ -94,7 +93,6 @@ export function DataTableInner<T extends BaseEntity>({
   queryKey,
   connectedQueryKeys,
   apiPath,
-  queryClient,
   buttons,
   fields,
   selection,
@@ -113,6 +111,7 @@ export function DataTableInner<T extends BaseEntity>({
     refetch,
   } = useGetAll<T>(apiPath, queryKey);
   const [data, setData] = useState<T[]>([]);
+  const { queryClient } = useDataTable();
 
   useEffect(() => {
     if (!allData || !Array.isArray(allData)) return;
