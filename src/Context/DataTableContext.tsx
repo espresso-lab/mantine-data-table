@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, ReactNode } from "react";
 
 interface State {
@@ -21,7 +21,7 @@ export function DataTableProvider({
 }: DataTableContextProps) {
   return (
     <DataTableContext.Provider value={{ baseUrl, queryClient }}>
-      {children}
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </DataTableContext.Provider>
   );
 }
