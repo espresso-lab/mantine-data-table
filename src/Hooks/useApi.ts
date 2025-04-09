@@ -12,11 +12,9 @@ export interface BaseEntity {
 
 type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-export type Headers = Record<string, string>;
-
 async function getAll<T extends BaseEntity>(
   path: string,
-  headers?: Headers,
+  headers?: HeadersInit,
 ): Promise<T[]> {
   return fetch(path, {
     method: "GET",
@@ -38,7 +36,7 @@ async function getAll<T extends BaseEntity>(
 export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
-  headers?: Headers,
+  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(`${path}/${id}`, {
     method: "GET",
@@ -60,7 +58,7 @@ export async function getOne<T extends BaseEntity>(
 async function deleteOne(
   path: string,
   id: string | number,
-  headers?: Headers,
+  headers?: HeadersInit,
 ): Promise<void> {
   await fetch(`${path}/${id}`, {
     method: "DELETE",
@@ -79,7 +77,7 @@ async function deleteOne(
 async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
-  headers?: Headers,
+  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(path, {
     method: "POST",
@@ -108,7 +106,7 @@ async function createOne<C, T extends BaseEntity>(
 async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
-  headers?: Headers,
+  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(`${path}/${item.id}`, {
     method: "PUT",
@@ -138,7 +136,7 @@ export function useGetOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   id: string | number,
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   return useQuery<T>({
     queryKey: [...queryKey.map((k) => k.toString()), id?.toString()],
@@ -151,7 +149,7 @@ export function useGetMany<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   ids: string[] | number[],
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   return useQueries({
     queries: ids.map<UseQueryOptions<T>>((id) => ({
@@ -165,7 +163,7 @@ export function useGetAll<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   enabled = true,
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   return useQuery<T[]>({
     queryKey: [...queryKey.map((k) => k.toString())],
@@ -181,7 +179,7 @@ interface MutationContext<T> {
 export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<T, Error, Omit<T, "id">, MutationContext<T>>({
@@ -221,7 +219,7 @@ export function useAddOne<T extends BaseEntity>(
 export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<T, Error, AtLeast<T, "id">, MutationContext<T>>({
@@ -280,7 +278,7 @@ export function useUpdateOne<T extends BaseEntity>(
 export function useDeleteOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: Headers,
+  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string | number, MutationContext<T>>({
