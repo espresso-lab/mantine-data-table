@@ -22,7 +22,6 @@ export async function getApiHeaders() {
 }
 
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
-  console.log("path", path);
   return fetch(path, {
     method: "GET",
     headers: await getApiHeaders(),
@@ -41,7 +40,6 @@ export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
 ): Promise<T> {
-  console.log("path", path);
   return fetch(`${path}/${id}`, {
     method: "GET",
     headers: await getApiHeaders(),
@@ -60,7 +58,6 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  console.log("path", path);
   await fetch(`${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
@@ -76,7 +73,6 @@ export async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
 ): Promise<T> {
-  console.log("path", path);
   return fetch(path, {
     method: "POST",
     headers: await getApiHeaders(),
@@ -103,7 +99,6 @@ export async function api<R, U>(
   path: string,
   payload?: U,
 ): Promise<R> {
-  console.log("path", path);
   return fetch(path, {
     method,
     headers: await getApiHeaders(),
@@ -129,7 +124,6 @@ export async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
 ): Promise<T> {
-  console.log("path", path);
   return fetch(`${path}/${item.id}`, {
     method: "PUT",
     headers: await getApiHeaders(),
