@@ -4,9 +4,9 @@
   "description": "Mantine UI Data Table component",
   "version": "0.0.0-development",
   "type": "module",
-  "main": "dist/index.umd.js",
-  "module": "dist/index.es.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.umd.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/index.d.ts",
   "license": "MIT",
   "author": {
     "name": "Espresso Lab",
@@ -20,12 +20,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.es.js",
-      "require": "./dist/index.umd.js"
+      "require": "./dist/index.umd.js",
+      "default": "./dist/index.es.js"
     },
     "./styles": "./dist/style.css"
   },
   "files": [
-    "/dist"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
