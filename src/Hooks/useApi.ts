@@ -1,3 +1,4 @@
+import { getIdToken } from "@espresso-lab/mantine-cognito";
 import {
   useMutation,
   useQueries,
@@ -10,18 +11,25 @@ export interface BaseEntity {
   id: string | number;
 }
 
+function getAssumeOrg(): HeadersInit {
+  const org = localStorage.getItem("a360.assumed-org");
+  return org ? { "X-Assume-Org": org } : {};
+}
+
+export async function getApiHeaders() {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${(await getIdToken()) ?? ""}`,
+    ...getAssumeOrg(),
+  };
+}
+
 type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-async function getAll<T extends BaseEntity>(
-  path: string,
-  headers?: HeadersInit,
-): Promise<T[]> {
+async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   return fetch(path, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: await getApiHeaders(),
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
@@ -36,14 +44,10 @@ async function getAll<T extends BaseEntity>(
 export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
-  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(`${path}/${id}`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: await getApiHeaders(),
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
@@ -55,17 +59,10 @@ export async function getOne<T extends BaseEntity>(
     .then((data) => data as T);
 }
 
-async function deleteOne(
-  path: string,
-  id: string | number,
-  headers?: HeadersInit,
-): Promise<void> {
+async function deleteOne(path: string, id: string | number): Promise<void> {
   await fetch(`${path}/${id}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: await getApiHeaders(),
   }).then(async (resp) => {
     if (resp.status >= 400) {
       throw await resp.text();
@@ -77,14 +74,10 @@ async function deleteOne(
 async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
-  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: await getApiHeaders(),
     body: JSON.stringify(item),
   })
     .then(async (resp) => {
@@ -106,14 +99,10 @@ async function createOne<C, T extends BaseEntity>(
 async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
-  headers?: HeadersInit,
 ): Promise<T> {
   return fetch(`${path}/${item.id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: await getApiHeaders(),
     body: JSON.stringify(item),
   })
     .then(async (resp) => {
@@ -136,11 +125,10 @@ export function useGetOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   id: string | number,
-  headers?: HeadersInit,
 ) {
   return useQuery<T>({
     queryKey: [...queryKey.map((k) => k.toString()), id?.toString()],
-    queryFn: () => getOne<T>(apiPath, id, headers),
+    queryFn: () => getOne<T>(apiPath, id),
     enabled: !!id,
   });
 }
@@ -149,12 +137,11 @@ export function useGetMany<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   ids: string[] | number[],
-  headers?: HeadersInit,
 ) {
   return useQueries({
     queries: ids.map<UseQueryOptions<T>>((id) => ({
       queryKey: [...queryKey.map((k) => k.toString()), id.toString()],
-      queryFn: () => getOne<T>(apiPath, id, headers),
+      queryFn: () => getOne<T>(apiPath, id),
     })),
   });
 }
@@ -163,11 +150,10 @@ export function useGetAll<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
   enabled = true,
-  headers?: HeadersInit,
 ) {
   return useQuery<T[]>({
     queryKey: [...queryKey.map((k) => k.toString())],
-    queryFn: () => getAll<T>(apiPath, headers),
+    queryFn: () => getAll<T>(apiPath),
     enabled,
   });
 }
@@ -179,11 +165,10 @@ interface MutationContext<T> {
 export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<T, Error, Omit<T, "id">, MutationContext<T>>({
-    mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item, headers),
+    mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item),
     onMutate: async (newItem) => {
       await queryClient.cancelQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
@@ -219,12 +204,10 @@ export function useAddOne<T extends BaseEntity>(
 export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<T, Error, AtLeast<T, "id">, MutationContext<T>>({
-    mutationFn: (item: AtLeast<T, "id">) =>
-      updateOne<T>(apiPath, item, headers),
+    mutationFn: (item: AtLeast<T, "id">) => updateOne<T>(apiPath, item),
     onMutate: async (newItem) => {
       await queryClient.cancelQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
@@ -278,11 +261,10 @@ export function useUpdateOne<T extends BaseEntity>(
 export function useDeleteOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: (string | number)[],
-  headers?: HeadersInit,
 ) {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string | number, MutationContext<T>>({
-    mutationFn: (id) => deleteOne(apiPath, id, headers),
+    mutationFn: (id) => deleteOne(apiPath, id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
