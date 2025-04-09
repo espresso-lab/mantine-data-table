@@ -9,9 +9,8 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
-import { Field, StepConfig } from "./DataTable.tsx";
-import { Fragment, useState } from "react";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+import { Field, StepConfig } from "./DataTableInner.tsx";
+import { Fragment, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
