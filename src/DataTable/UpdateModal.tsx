@@ -10,7 +10,7 @@ import {
 import { Fragment, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useGetOne, useUpdateOne } from "../Hooks/useApi";
-import { Field, StepConfig } from "./DataTable.tsx";
+import { Field, StepConfig } from "./DataTableInner.tsx";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import type { FormRule } from "@mantine/form/lib/types";
