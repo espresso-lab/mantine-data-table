@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getIdToken } from "@espresso-lab/mantine-cognito";
+import { useDataTable } from "./useDataTable.ts";
 
 export interface BaseEntity {
   id: string | number;
@@ -170,7 +171,7 @@ export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const queryClient = useQueryClient();
+  const { queryClient } = useDataTable();
   return useMutation<T, Error, Omit<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item),
@@ -186,7 +187,7 @@ export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const queryClient = useQueryClient();
+  const { queryClient } = useDataTable();
   return useMutation<T, Error, AtLeast<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item: AtLeast<T, "id">) => updateOne<T>(apiPath, item),
@@ -202,7 +203,7 @@ export function useDeleteOne(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const queryClient = useQueryClient();
+  const { queryClient } = useDataTable();
   return useMutation<void, Error, string | number>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (id) => deleteOne(apiPath, id),
