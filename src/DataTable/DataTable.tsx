@@ -72,7 +72,6 @@ export interface DataTableProps<T extends BaseEntity> {
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
-  apiHeaders?: HeadersInit;
   filters?: Filter[];
   buttons?: React.ReactNode[];
   createButtonText?: string;
