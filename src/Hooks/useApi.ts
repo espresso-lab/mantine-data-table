@@ -22,7 +22,8 @@ export async function getApiHeaders() {
 }
 
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
-  return fetch(path, {
+  const { baseUrl } = useDataTable();
+  return fetch(`${baseUrl}${path}`, {
     method: "GET",
     headers: await getApiHeaders(),
   })
@@ -40,7 +41,8 @@ export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
 ): Promise<T> {
-  return fetch(`${path}/${id}`, {
+  const { baseUrl } = useDataTable();
+  return fetch(`${baseUrl}${path}/${id}`, {
     method: "GET",
     headers: await getApiHeaders(),
   })
@@ -58,7 +60,8 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  await fetch(`${path}/${id}`, {
+  const { baseUrl } = useDataTable();
+  await fetch(`${baseUrl}${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
   }).then(async (resp) => {
@@ -73,7 +76,8 @@ export async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
 ): Promise<T> {
-  return fetch(path, {
+  const { baseUrl } = useDataTable();
+  return fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: await getApiHeaders(),
     body: JSON.stringify(item),
@@ -99,7 +103,8 @@ export async function api<R, U>(
   path: string,
   payload?: U,
 ): Promise<R> {
-  return fetch(path, {
+  const { baseUrl } = useDataTable();
+  return fetch(`${baseUrl}${path}`, {
     method,
     headers: await getApiHeaders(),
     body: payload ? JSON.stringify(payload) : undefined,
@@ -124,7 +129,8 @@ export async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
 ): Promise<T> {
-  return fetch(`${path}/${item.id}`, {
+  const { baseUrl } = useDataTable();
+  return fetch(`${baseUrl}${path}/${item.id}`, {
     method: "PUT",
     headers: await getApiHeaders(),
     body: JSON.stringify(item),
