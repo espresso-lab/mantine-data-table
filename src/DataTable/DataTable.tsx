@@ -7,7 +7,7 @@ import {
   Modal,
   Title,
 } from "@mantine/core";
-import { BaseEntity, Headers, useGetAll } from "../Hooks/useApi";
+import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useState } from "react";
 import { CreateModal } from "./CreateModal";
 import {
@@ -72,7 +72,7 @@ export interface DataTableProps<T extends BaseEntity> {
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
-  apiHeaders?: Headers;
+  apiHeaders?: HeadersInit;
   filters?: Filter[];
   buttons?: React.ReactNode[];
   createButtonText?: string;
