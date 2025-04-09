@@ -20,7 +20,7 @@ export function DeleteModal<T extends BaseEntity>({
     isError: isDeleteError,
     error: deleteError,
     isPending: isDeletePending,
-  } = useDeleteOne<T>(apiPath, queryKey);
+  } = useDeleteOne(apiPath, queryKey);
 
   const [records, setRecords] = useState<T[]>(selectedRecords);
 
