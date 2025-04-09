@@ -175,7 +175,7 @@ export function useAddOne<T extends BaseEntity>(
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item),
     onSettled() {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
       });
     },
@@ -191,7 +191,7 @@ export function useUpdateOne<T extends BaseEntity>(
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item: AtLeast<T, "id">) => updateOne<T>(apiPath, item),
     onSettled() {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
       });
     },
@@ -207,7 +207,7 @@ export function useDeleteOne(
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (id) => deleteOne(apiPath, id),
     onSettled() {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
       });
     },
