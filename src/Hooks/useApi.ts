@@ -22,9 +22,8 @@ export async function getApiHeaders() {
 }
 
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  return fetch(`${baseUrl}${path}`, {
+  console.log("path", path);
+  return fetch(path, {
     method: "GET",
     headers: await getApiHeaders(),
   })
@@ -42,9 +41,8 @@ export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
 ): Promise<T> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  return fetch(`${baseUrl}${path}/${id}`, {
+  console.log("path", path);
+  return fetch(`${path}/${id}`, {
     method: "GET",
     headers: await getApiHeaders(),
   })
@@ -62,9 +60,8 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  await fetch(`${baseUrl}${path}/${id}`, {
+  console.log("path", path);
+  await fetch(`${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
   }).then(async (resp) => {
@@ -79,9 +76,8 @@ export async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
 ): Promise<T> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  return fetch(`${baseUrl}${path}`, {
+  console.log("path", path);
+  return fetch(path, {
     method: "POST",
     headers: await getApiHeaders(),
     body: JSON.stringify(item),
@@ -107,9 +103,8 @@ export async function api<R, U>(
   path: string,
   payload?: U,
 ): Promise<R> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  return fetch(`${baseUrl}${path}`, {
+  console.log("path", path);
+  return fetch(path, {
     method,
     headers: await getApiHeaders(),
     body: payload ? JSON.stringify(payload) : undefined,
@@ -134,9 +129,8 @@ export async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
 ): Promise<T> {
-  const { baseUrl } = useDataTable();
-  console.log("baseUrl", baseUrl);
-  return fetch(`${baseUrl}${path}/${item.id}`, {
+  console.log("path", path);
+  return fetch(`${path}/${item.id}`, {
     method: "PUT",
     headers: await getApiHeaders(),
     body: JSON.stringify(item),
@@ -162,9 +156,10 @@ export function useGetOne<T extends BaseEntity>(
   queryKey: Array<string | number>,
   id?: string | number,
 ) {
+  const { baseUrl } = useDataTable();
   return useQuery<T>({
     queryKey: [...queryKey.map((k) => k.toString()), String(id?.toString())],
-    queryFn: () => getOne<T>(apiPath, id!),
+    queryFn: () => getOne<T>(`${baseUrl}${apiPath}`, id!),
     enabled: !!id,
   });
 }
@@ -173,9 +168,10 @@ export function useGetAll<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
+  const { baseUrl } = useDataTable();
   return useQuery<T[]>({
     queryKey: [...queryKey.map((k) => k.toString())],
-    queryFn: () => getAll<T>(apiPath),
+    queryFn: () => getAll<T>(`${baseUrl}${apiPath}`),
   });
 }
 
@@ -183,10 +179,11 @@ export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { queryClient } = useDataTable();
+  const { baseUrl, queryClient } = useDataTable();
   return useMutation<T, Error, Omit<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
-    mutationFn: (item) => createOne<Omit<T, "id">, T>(apiPath, item),
+    mutationFn: (item) =>
+      createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
@@ -199,10 +196,11 @@ export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { queryClient } = useDataTable();
+  const { baseUrl, queryClient } = useDataTable();
   return useMutation<T, Error, AtLeast<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
-    mutationFn: (item: AtLeast<T, "id">) => updateOne<T>(apiPath, item),
+    mutationFn: (item: AtLeast<T, "id">) =>
+      updateOne<T>(`${baseUrl}${apiPath}`, item),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
@@ -215,10 +213,10 @@ export function useDeleteOne(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { queryClient } = useDataTable();
+  const { baseUrl, queryClient } = useDataTable();
   return useMutation<void, Error, string | number>({
     mutationKey: [...queryKey.map((k) => k.toString())],
-    mutationFn: (id) => deleteOne(apiPath, id),
+    mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
