@@ -23,6 +23,7 @@ export async function getApiHeaders() {
 
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   return fetch(`${baseUrl}${path}`, {
     method: "GET",
     headers: await getApiHeaders(),
@@ -42,6 +43,7 @@ export async function getOne<T extends BaseEntity>(
   id: string | number,
 ): Promise<T> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   return fetch(`${baseUrl}${path}/${id}`, {
     method: "GET",
     headers: await getApiHeaders(),
@@ -61,6 +63,7 @@ export async function deleteOne(
   id: string | number,
 ): Promise<void> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   await fetch(`${baseUrl}${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
@@ -77,6 +80,7 @@ export async function createOne<C, T extends BaseEntity>(
   item: C,
 ): Promise<T> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   return fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: await getApiHeaders(),
@@ -104,6 +108,7 @@ export async function api<R, U>(
   payload?: U,
 ): Promise<R> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   return fetch(`${baseUrl}${path}`, {
     method,
     headers: await getApiHeaders(),
@@ -130,6 +135,7 @@ export async function updateOne<T extends BaseEntity>(
   item: AtLeast<T, "id">,
 ): Promise<T> {
   const { baseUrl } = useDataTable();
+  console.log("baseUrl", baseUrl);
   return fetch(`${baseUrl}${path}/${item.id}`, {
     method: "PUT",
     headers: await getApiHeaders(),
