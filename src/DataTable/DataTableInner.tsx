@@ -29,6 +29,7 @@ import { DatesRangeValue } from "@mantine/dates";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
+import {usePersistentState} from "../Hooks/usePersitentState.ts";
 
 interface Filter {
   id: string | number;
@@ -176,7 +177,7 @@ export function DataTableInner<T extends BaseEntity>({
   }, [sortStatus, data]);
 
   // handle pagination
-  const [pageSize, setPageSize] = useState(PAGE_SIZES[1]);
+  const [pageSize, setPageSize] = usePersistentState(PAGE_SIZES[1], "mantine-table-page-size");
   const [page, setPage] = useState(1);
   const [records, setRecords] = useState<T[]>(
     pagination ? sortedData.slice(0, pageSize) : sortedData,
