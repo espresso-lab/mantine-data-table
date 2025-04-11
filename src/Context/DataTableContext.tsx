@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, ReactNode } from "react";
 
-interface State {
+export interface State {
   baseUrl: string;
   queryClient: QueryClient;
 }

@@ -1,7 +1,7 @@
 import { useContext } from "react";
-import { DataTableContext } from "../Context/DataTableContext.tsx";
+import { DataTableContext, State } from "../Context/DataTableContext.tsx";
 
-export function useDataTable() {
+export function useDataTable(): State {
   const context = useContext(DataTableContext);
 
   if (context === undefined) {
