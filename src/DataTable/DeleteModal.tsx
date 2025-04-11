@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Text } from "@mantine/core";
+import { Alert, Button, Group, Skeleton, Stack, Text } from "@mantine/core";
 import { BaseEntity, useDeleteOne } from "../Hooks/useApi";
 import { useEffect, useState } from "react";
 
@@ -41,28 +41,42 @@ export function DeleteModal<T extends BaseEntity>({
           {deleteError.message}
         </Alert>
       )}
-      <Text>
-        Bist du sicher, dass du folgenden Eintrag löschen möchtest?
-        <br />
-        {selectedRecords[0].id}
-      </Text>
-      <Group mt="md" justify="end">
-        <Button onClick={onClose} variant="outline">
-          Abbrechen
-        </Button>
-        <Button
-          color="red"
-          loading={isDeletePending}
-          onClick={async () => {
-            await del(records[0].id);
-            setRecords((r) =>
-              r.filter((record) => record.id !== records[0].id),
-            );
-          }}
-        >
-          Delete
-        </Button>
-      </Group>
+
+      {isDeletePending ? (
+        <Stack gap="md">
+          <Skeleton height={30} width="80%" />
+          <Skeleton height={20} width="50%" />
+          <Group mt="md" justify="end">
+            <Skeleton width={100} height={36} />
+            <Skeleton width={100} height={36} />
+          </Group>
+        </Stack>
+      ) : (
+        <>
+          <Text>
+            Bist du sicher, dass du folgenden Eintrag löschen möchtest?
+            <br />
+            {selectedRecords[0].id}
+          </Text>
+          <Group mt="md" justify="end">
+            <Button onClick={onClose} variant="outline">
+              Abbrechen
+            </Button>
+            <Button
+              color="red"
+              loading={isDeletePending}
+              onClick={async () => {
+                await del(records[0].id);
+                setRecords((r) =>
+                  r.filter((record) => record.id !== records[0].id),
+                );
+              }}
+            >
+              Delete
+            </Button>
+          </Group>
+        </>
+      )}
     </>
   );
 }

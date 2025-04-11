@@ -4,6 +4,8 @@ import {
   Checkbox,
   Group,
   NumberInput,
+  Skeleton,
+  Stack,
   Stepper,
   TextInput,
 } from "@mantine/core";
@@ -36,7 +38,7 @@ export function UpdateModal<T extends BaseEntity>({
   const [active, setActive] = useState<number>(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
 
-  const { data } = useGetOne<T>(apiPath, queryKey, id);
+  const { data, isLoading: isDataLoading } = useGetOne<T>(apiPath, queryKey, id);
   const {
     mutateAsync: update,
     isError: isUpdateError,
@@ -162,71 +164,85 @@ export function UpdateModal<T extends BaseEntity>({
           {updateError?.message ?? "Fehler aufgetreten"}
         </Alert>
       )}
-      <form
-        onSubmit={form.onSubmit(async (values) => {
-          await update({
-            ...values,
-            id,
-          } as T);
-          if (stepsAvailable.length && active < stepsAvailable.length - 1) {
-            if (!isUpdateError) {
-              setActive(active + 1);
-            }
-          } else {
-            if (!isUpdateError) {
-              form.setInitialValues(values);
-              form.reset();
-              onClose();
-            }
-          }
-        })}
-      >
-        {stepsAvailable.length ? (
-          <Stepper active={active} size="sm">
-            {stepsAvailable.map((step) => (
-              <Stepper.Step
-                key={step}
-                {...(steps && steps[step - 1]
-                  ? { label: steps[step - 1].label }
-                  : {})}
-              >
-                {fields
-                  .filter((f) => f.step === step)
-                  .map((field) => renderField(field))}
-              </Stepper.Step>
-            ))}
-          </Stepper>
-        ) : (
-          fields.map((field) => renderField(field))
-        )}
-        {!hideButtons && (
+
+      {isDataLoading ? (
+        <Stack gap="md">
+          <Skeleton height={40} />
+          {Array(fields.length).fill(0).map((_, index) => (
+            <Skeleton key={`skeleton-field-${index}`} height={35} />
+          ))}
           <Group mt="md" justify="end">
-            <Button
-              onClick={() =>
-                stepsAvailable.length
-                  ? active === 0
-                    ? onClose()
-                    : setActive(active - 1)
-                  : onClose()
-              }
-              variant="outline"
-            >
-              {stepsAvailable.length
-                ? active === 0
-                  ? "Abbrechen"
-                  : "Zurück"
-                : "Abbrechen"}
-            </Button>
-            <Button type="submit" loading={isPending}>
-              {stepsAvailable.length
-                ? active === stepsAvailable.length - 1
-                  ? "Speichern"
-                  : "Weiter"
-                : "Speichern"}
-            </Button>
+            <Skeleton width={100} height={36} />
+            <Skeleton width={100} height={36} />
           </Group>
-        )}
-      </form>
+        </Stack>
+      ) : (
+        <form
+          onSubmit={form.onSubmit(async (values) => {
+            await update({
+              ...values,
+              id,
+            } as T);
+            if (stepsAvailable.length && active < stepsAvailable.length - 1) {
+              if (!isUpdateError) {
+                setActive(active + 1);
+              }
+            } else {
+              if (!isUpdateError) {
+                form.setInitialValues(values);
+                form.reset();
+                onClose();
+              }
+            }
+          })}
+        >
+          {stepsAvailable.length ? (
+            <Stepper active={active} size="sm">
+              {stepsAvailable.map((step) => (
+                <Stepper.Step
+                  key={step}
+                  {...(steps && steps[step - 1]
+                    ? { label: steps[step - 1].label }
+                    : {})}
+                >
+                  {fields
+                    .filter((f) => f.step === step)
+                    .map((field) => renderField(field))}
+                </Stepper.Step>
+              ))}
+            </Stepper>
+          ) : (
+            fields.map((field) => renderField(field))
+          )}
+          {!hideButtons && (
+            <Group mt="md" justify="end">
+              <Button
+                onClick={() =>
+                  stepsAvailable.length
+                    ? active === 0
+                      ? onClose()
+                      : setActive(active - 1)
+                    : onClose()
+                }
+                variant="outline"
+              >
+                {stepsAvailable.length
+                  ? active === 0
+                    ? "Abbrechen"
+                    : "Zurück"
+                  : "Abbrechen"}
+              </Button>
+              <Button type="submit" loading={isPending}>
+                {stepsAvailable.length
+                  ? active === stepsAvailable.length - 1
+                    ? "Speichern"
+                    : "Weiter"
+                  : "Speichern"}
+              </Button>
+            </Group>
+          )}
+        </form>
+      )}
     </>
   );
 }

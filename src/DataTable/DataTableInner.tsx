@@ -5,6 +5,8 @@ import {
   Group,
   Menu,
   Modal,
+  Skeleton,
+  Stack,
   Title,
 } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
@@ -284,30 +286,43 @@ export function DataTableInner<T extends BaseEntity>({
         </Alert>
       )}
 
-      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-      {/* @ts-expect-error */}
-      <MantineDataTable
-        my="md"
-        striped
-        minHeight={150}
-        fetching={isLoading || isError || isRefetching}
-        records={records}
-        sortStatus={sortStatus}
-        onSortStatusChange={setSortStatus}
-        {...(selection && {
-          selectedRecords,
-          onSelectedRecordsChange: setSelectedRecords,
-        })}
-        {...(pagination &&
-          records.length && {
-            totalRecords: sortedData.length,
-            recordsPerPage: PAGE_SIZE,
-            onPageChange: setPage,
-            page,
+      {(isLoading || isRefetching) && (
+        <Stack my="md">
+          <Skeleton height={40} />
+          {Array(5)
+            .fill(0)
+            .map((_, index) => (
+              <Skeleton key={`skeleton-${index}`} height={35} />
+            ))}
+        </Stack>
+      )}
+
+      {!isLoading && !isRefetching && (
+        /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
+        /* @ts-expect-error */
+        <MantineDataTable
+          my="md"
+          striped
+          minHeight={150}
+          fetching={isError}
+          records={records}
+          sortStatus={sortStatus}
+          onSortStatusChange={setSortStatus}
+          {...(selection && {
+            selectedRecords,
+            onSelectedRecordsChange: setSelectedRecords,
           })}
-        columns={fields.map((field) => field.column)}
-        noRecordsText="Keine Einträge gefunden"
-      />
+          {...(pagination &&
+            records.length && {
+              totalRecords: sortedData.length,
+              recordsPerPage: PAGE_SIZE,
+              onPageChange: setPage,
+              page,
+            })}
+          columns={fields.map((field) => field.column)}
+          noRecordsText="Keine Einträge gefunden"
+        />
+      )}
 
       <Modal
         opened={updateModalOpen}
