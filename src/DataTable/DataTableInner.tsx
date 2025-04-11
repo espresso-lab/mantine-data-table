@@ -88,7 +88,7 @@ export interface DataTableProps<T extends BaseEntity> {
   };
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 15, 20, 50, 100];
 
 export function DataTableInner<T extends BaseEntity>({
   title,
@@ -176,15 +176,20 @@ export function DataTableInner<T extends BaseEntity>({
   }, [sortStatus, data]);
 
   // handle pagination
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[1]);
   const [page, setPage] = useState(1);
   const [records, setRecords] = useState<T[]>(
-    pagination ? sortedData.slice(0, PAGE_SIZE) : sortedData,
+    pagination ? sortedData.slice(0, pageSize) : sortedData,
   );
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     if (pagination) {
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize;
       setRecords(sortedData.slice(from, to));
     } else {
       setRecords(sortedData);
@@ -315,9 +320,12 @@ export function DataTableInner<T extends BaseEntity>({
           {...(pagination &&
             records.length && {
               totalRecords: sortedData.length,
-              recordsPerPage: PAGE_SIZE,
+              recordsPerPage: pageSize,
               onPageChange: setPage,
               page,
+              recordsPerPageOptions: PAGE_SIZES,
+              onRecordsPerPageChange: setPageSize,
+              recordsPerPageLabel: "Einträge pro Seite",
             })}
           columns={fields.map((field) => field.column)}
           noRecordsText="Keine Einträge gefunden"
