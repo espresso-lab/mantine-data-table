@@ -194,7 +194,7 @@ export function DataTableInner<T extends BaseEntity>({
     } else {
       setRecords(sortedData);
     }
-  }, [page, sortedData, pagination]);
+  }, [page, sortedData, pagination, pageSize]);
 
   const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
   useEffect(() => {
