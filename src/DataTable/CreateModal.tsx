@@ -123,12 +123,7 @@ export function CreateModal<T extends BaseEntity>({
 
         {field.type === "custom" &&
           field.render &&
-          field.render(
-            form.getValues() as T,
-            form.getInputProps(field.id as keyof T).onChange,
-            setHideButtons,
-            form.setValues,
-          )}
+          field.render(form.getValues() as T, form.setValues, setHideButtons)}
       </Fragment>
     );
   }
