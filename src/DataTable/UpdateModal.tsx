@@ -38,7 +38,11 @@ export function UpdateModal<T extends BaseEntity>({
   const [active, setActive] = useState<number>(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
 
-  const { data, isLoading: isDataLoading } = useGetOne<T>(apiPath, queryKey, id);
+  const { data, isLoading: isDataLoading } = useGetOne<T>(
+    apiPath,
+    queryKey,
+    id,
+  );
   const {
     mutateAsync: update,
     isError: isUpdateError,
@@ -142,12 +146,7 @@ export function UpdateModal<T extends BaseEntity>({
 
         {field.type === "custom" &&
           field.render &&
-          field.render(
-            form.getValues() as unknown as T,
-            form.getInputProps(field.id as keyof T).onChange,
-            setHideButtons,
-            form.setValues,
-          )}
+          field.render(form.getValues() as T, form.setValues, setHideButtons)}
       </Fragment>
     );
   }
@@ -168,9 +167,11 @@ export function UpdateModal<T extends BaseEntity>({
       {isDataLoading ? (
         <Stack gap="md">
           <Skeleton height={40} />
-          {Array(fields.length).fill(0).map((_, index) => (
-            <Skeleton key={`skeleton-field-${index}`} height={35} />
-          ))}
+          {Array(fields.length)
+            .fill(0)
+            .map((_, index) => (
+              <Skeleton key={`skeleton-field-${index}`} height={35} />
+            ))}
           <Group mt="md" justify="end">
             <Skeleton width={100} height={36} />
             <Skeleton width={100} height={36} />
