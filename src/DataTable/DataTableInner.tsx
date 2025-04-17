@@ -52,7 +52,7 @@ export interface Field<T> {
   placeholder?: string;
   render?: (
     values: T,
-    setValues: (values: T) => void,
+    setValues: (values: Partial<T>) => void,
     hideButtons: (value: boolean) => void,
   ) => React.ReactNode;
   column: DataTableColumn<T>;
@@ -273,7 +273,10 @@ export function DataTableInner<T extends BaseEntity>({
             </Menu>
           )}
           {fields.find((field) => field.create) && (
-            <Button onClick={() => setCreateModalOpen(true)} disabled={isLoading}>
+            <Button
+              onClick={() => setCreateModalOpen(true)}
+              disabled={isLoading}
+            >
               {createButtonText ?? "Erstellen"}
             </Button>
           )}
