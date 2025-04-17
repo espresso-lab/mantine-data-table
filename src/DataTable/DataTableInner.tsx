@@ -273,7 +273,7 @@ export function DataTableInner<T extends BaseEntity>({
             </Menu>
           )}
           {fields.find((field) => field.create) && (
-            <Button onClick={() => setCreateModalOpen(true)}>
+            <Button onClick={() => setCreateModalOpen(true)} disabled={isLoading}>
               {createButtonText ?? "Erstellen"}
             </Button>
           )}
