@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function usePersistentState<T>(
   initialValue: T,
@@ -16,6 +16,19 @@ export function usePersistentState<T>(
       JSON.stringify(newState),
     );
   };
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === `use_persistent_storage_${key}` && event.newValue) {
+        setState(JSON.parse(event.newValue) as T);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [key]);
 
   return [state, setStateWrapper];
 }
