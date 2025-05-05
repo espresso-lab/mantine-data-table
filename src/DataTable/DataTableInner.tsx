@@ -88,7 +88,7 @@ export interface DataTableProps<T extends BaseEntity> {
   };
 }
 
-const PAGE_SIZES = [10, 15, 20, 50, 100];
+const PAGE_SIZES = [10, 15, 20, 50, 100, 500];
 
 export function DataTableInner<T extends BaseEntity>({
   title,
