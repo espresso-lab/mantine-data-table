@@ -109,7 +109,7 @@ export function UpdateModal<T extends BaseEntity>({
             label={field.column.title}
             key={form.key(field.id)}
             placeholder={field.placeholder ?? ""}
-            {...form.getInputProps(field.id as keyof T)}
+            {...form.getInputProps(field.id as string)}
             type={field.id.includes("email") ? "email" : undefined}
           />
         )}
@@ -120,7 +120,7 @@ export function UpdateModal<T extends BaseEntity>({
             label={field.column.title}
             placeholder={field.placeholder ?? ""}
             key={form.key(field.id)}
-            {...form.getInputProps(field.id as keyof T)}
+            {...form.getInputProps(field.id as string)}
           />
         )}
 
@@ -131,7 +131,7 @@ export function UpdateModal<T extends BaseEntity>({
             key={form.key(field.id)}
             valueFormat={"DD.MM.YYYY"}
             clearable
-            {...form.getInputProps(field.id as keyof T)}
+            {...form.getInputProps(field.id as string)}
           />
         )}
 
@@ -140,7 +140,7 @@ export function UpdateModal<T extends BaseEntity>({
             mt="md"
             label={field.column.title}
             key={form.key(field.id)}
-            {...form.getInputProps(field.id as keyof T, { type: "checkbox" })}
+            {...form.getInputProps(field.id as string, { type: "checkbox" })}
           />
         )}
 
