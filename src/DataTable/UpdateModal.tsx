@@ -146,7 +146,11 @@ export function UpdateModal<T extends BaseEntity>({
 
         {field.type === "custom" &&
           field.render &&
-          field.render(form.getValues() as T, form.setValues, setHideButtons)}
+          field.render(
+            { ...form.getValues(), id } as T,
+            form.setValues,
+            setHideButtons,
+          )}
       </Fragment>
     );
   }
