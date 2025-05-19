@@ -38,14 +38,13 @@
     "preview": "vite preview"
   },
   "peerDependencies": {
-    "@mantine/core": "^8.0.0",
-    "@mantine/dates": "^8.0.0",
-    "@mantine/form": "^8.0.0",
-    "@mantine/hooks": "^8.0.0",
+    "@mantine/core": "^8.0.1",
+    "@mantine/dates": "^8.0.1",
+    "@mantine/form": "^8.0.1",
+    "@mantine/hooks": "^8.0.1",
     "@tabler/icons-react": "^3.31.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@espresso-lab/mantine-cognito": "^1.7.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
