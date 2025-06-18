@@ -31,11 +31,25 @@ import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
 import { usePersistentState } from "../Hooks/usePersitentState.ts";
 
-interface Filter {
+interface DateFilter {
   id: string | number;
-  type: "query" | "date";
-  value?: string | DatesRangeValue;
+  type: "date";
+  value?: DatesRangeValue;
 }
+
+interface StringFilter {
+  id: string | number;
+  type: "query";
+  value?: string;
+}
+
+interface BooleanFilter {
+  id: string | number;
+  type: "boolean";
+  value?: boolean;
+}
+
+type Filter = DateFilter | StringFilter | BooleanFilter;
 
 export type FieldType = "text" | "number" | "boolean" | "custom" | "date";
 
@@ -130,18 +144,18 @@ export function DataTableInner<T extends BaseEntity>({
     setData(
       allData.filter((record: T) =>
         filters.every((filter) => {
+          if (filter.value === undefined) {
+            return true;
+          }
+
           const key = filter.id as keyof T;
-          if (filter.type === "query" && typeof filter.value === "string") {
+          if (filter.type === "query") {
             const recordValue = record[key];
             return (
               typeof recordValue === "string" &&
               recordValue.includes(filter.value)
             );
           } else if (filter.type === "date") {
-            if (!filter.value) {
-              return true;
-            }
-
             const dateValue = filter.value as DatesRangeValue;
             const [from, to] = dateValue;
             if (from && to) {
@@ -152,6 +166,9 @@ export function DataTableInner<T extends BaseEntity>({
               }
             }
             return true;
+          }  else if (filter.type === "boolean") {
+            const recordValue = record[key];
+            return recordValue === filter.value;
           }
           return true;
         }),
