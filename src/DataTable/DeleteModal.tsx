@@ -23,6 +23,10 @@ export function DeleteModal<T extends BaseEntity>({
   } = useDeleteOne(apiPath, queryKey);
 
   const [records, setRecords] = useState<T[]>(selectedRecords);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Combined loading state for clean usage
+  const isLoading = isDeleting || isDeletePending;
 
   useEffect(() => {
     if (!records.length) {
@@ -43,25 +47,29 @@ export function DeleteModal<T extends BaseEntity>({
       )}
 
       <Text>
-        Bist du sicher, dass du folgenden Eintrag löschen möchtest?
-        <br />
-        {selectedRecords[0].id}
+        Sollen {records.length} {records.length === 1 ? "Eintrag" : "Einträge"}{" "}
+        wirklich gelöscht werden?
       </Text>
       <Group mt="md" justify="end">
-        <Button onClick={onClose} variant="outline">
+        <Button onClick={onClose} variant="outline" disabled={isLoading}>
           Abbrechen
         </Button>
         <Button
           color="red"
-          loading={isDeletePending}
+          loading={isLoading}
           onClick={async () => {
-            await del(records[0].id);
-            setRecords((r) =>
-              r.filter((record) => record.id !== records[0].id),
-            );
+            setIsDeleting(true);
+            try {
+              await Promise.all(records.map((record) => del(record.id)));
+              setRecords([]);
+            } finally {
+              setIsDeleting(false);
+            }
           }}
         >
-          Delete
+          {records.length === 1
+            ? "Löschen"
+            : `${records.length} Einträge löschen`}
         </Button>
       </Group>
     </>
