@@ -47,8 +47,9 @@ export function DeleteModal<T extends BaseEntity>({
       )}
 
       <Text>
-        Sollen {records.length} {records.length === 1 ? "Eintrag" : "Einträge"}{" "}
-        wirklich gelöscht werden?
+        {records.length === 1
+          ? `Soll ${records.length} Eintrag wirklich gelöscht werden?`
+          : `Sollen ${records.length} Einträge wirklich gelöscht werden?`}
       </Text>
       <Group mt="md" justify="end">
         <Button onClick={onClose} variant="outline" disabled={isLoading}>
@@ -67,9 +68,7 @@ export function DeleteModal<T extends BaseEntity>({
             }
           }}
         >
-          {records.length === 1
-            ? "Löschen"
-            : `${records.length} Einträge löschen`}
+          Löschen
         </Button>
       </Group>
     </>
