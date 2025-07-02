@@ -88,6 +88,7 @@ export interface DataTableProps<T extends BaseEntity> {
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
+  queryParams?: Record<string, string | number | boolean | null>;
   filters?: Filter[];
   buttons?: React.ReactNode[];
   createButtonText?: string;
@@ -118,14 +119,25 @@ export function DataTableInner<T extends BaseEntity>({
   steps,
   defaultSort,
   createButtonText,
+  queryParams
 }: DataTableProps<T>) {
+
+  // Build query string like ?id=1&name=test
+  const queryString: string = queryParams
+      ? '?' + Object.entries(queryParams)
+      .filter(([, value]) => value !== null && value !== undefined)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value ?? '')}`)
+      .join('&')
+      : '';
+
   const {
     data: allData,
     isLoading,
     isError,
     isRefetching,
     refetch,
-  } = useGetAll<T>(apiPath, queryKey);
+  } = useGetAll<T>(apiPath + queryString, queryKey);
+
   const [data, setData] = useState<T[]>([]);
   const { queryClient } = useDataTable();
 
@@ -174,7 +186,7 @@ export function DataTableInner<T extends BaseEntity>({
         }),
       ),
     );
-  }, [allData, filters]);
+  }, [allData, filters, queryParams]);
 
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
