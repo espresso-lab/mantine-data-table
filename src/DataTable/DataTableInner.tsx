@@ -390,26 +390,26 @@ export function DataTableInner<T extends BaseEntity>({
         )}
       </Modal>
 
-      <Modal
-        opened={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setSelectedRecords([]);
-        }}
-        title={title ?? "Löschen"}
-      >
-        {selectedRecords.length > 0 && (
-          <DeleteModal<T>
-            onClose={() => {
-              setDeleteModalOpen(false);
-              setSelectedRecords([]);
-            }}
-            queryKey={queryKey}
-            apiPath={apiPath}
-            selectedRecords={selectedRecords}
-          />
-        )}
-      </Modal>
+      {selectedRecords.length > 0 && (
+        <Modal
+          opened={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setSelectedRecords([]);
+          }}
+          title={title ?? "Löschen"}
+        >
+            <DeleteModal<T>
+              onClose={() => {
+                setDeleteModalOpen(false);
+                setSelectedRecords([]);
+              }}
+              queryKey={queryKey}
+              apiPath={apiPath}
+              selectedRecords={selectedRecords}
+            />
+        </Modal>
+      )}
 
       <Modal
         opened={createModalOpen}
