@@ -150,13 +150,15 @@ export function DataTableInner<T extends BaseEntity>({
         .join("&")
     : "";
 
+  const effectiveQueryKey = activeTab ? [...queryKey, activeTab] : queryKey;
+
   const {
     data: allData,
     isLoading,
     isError,
     isRefetching,
     refetch,
-  } = useGetAll<T>(apiPath + queryString, queryKey);
+  } = useGetAll<T>(apiPath + queryString, effectiveQueryKey);
 
   const [data, setData] = useState<T[]>([]);
   const { queryClient } = useDataTable();
