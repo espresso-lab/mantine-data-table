@@ -111,6 +111,8 @@ export interface DataTableProps<T extends BaseEntity> {
   };
   tabs?: TabOption[];
   defaultTab?: string;
+  activeTab?: string | null;
+  onActiveTabChange?: (tabValue: string | null) => void;
 }
 
 const PAGE_SIZES = [10, 15, 20, 50, 100, 500];
@@ -132,10 +134,23 @@ export function DataTableInner<T extends BaseEntity>({
   queryParams,
   tabs,
   defaultTab,
+  activeTab: controlledActiveTab,
+  onActiveTabChange,
 }: DataTableProps<T>) {
-  const [activeTab, setActiveTab] = useState<string | null>(
+  const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
+
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+
+  const handleTabChange = (value: string | null) => {
+    if (controlledActiveTab === undefined) {
+      setInternalActiveTab(value);
+    }
+    if (onActiveTabChange) {
+      onActiveTabChange(value);
+    }
+  };
 
   const currentTabParams =
     tabs?.find((tab) => tab.value === activeTab)?.queryParams || {};
@@ -341,7 +356,7 @@ export function DataTableInner<T extends BaseEntity>({
       </Group>
 
       {tabs && tabs.length > 0 && (
-        <Tabs value={activeTab} onChange={setActiveTab} mt="md">
+        <Tabs value={activeTab} onChange={handleTabChange} mt="md">
           <Tabs.List>
             {tabs.map((tab) => (
               <Tabs.Tab
