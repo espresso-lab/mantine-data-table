@@ -7,6 +7,7 @@ import {
   Modal,
   Skeleton,
   Stack,
+  Tabs,
   Title,
 } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
@@ -78,6 +79,13 @@ interface Action<T extends BaseEntity> {
   onClick: (records: T[]) => void;
 }
 
+export interface TabOption {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+  queryParams?: Record<string, string | number | boolean | null>;
+}
+
 export interface StepConfig {
   label: string;
   description?: string;
@@ -101,6 +109,8 @@ export interface DataTableProps<T extends BaseEntity> {
     field: string;
     direction: "asc" | "desc";
   };
+  tabs?: TabOption[];
+  defaultTab?: string;
 }
 
 const PAGE_SIZES = [10, 15, 20, 50, 100, 500];
@@ -119,16 +129,26 @@ export function DataTableInner<T extends BaseEntity>({
   steps,
   defaultSort,
   createButtonText,
-  queryParams
+  queryParams,
+  tabs,
+  defaultTab,
 }: DataTableProps<T>) {
+  const [activeTab, setActiveTab] = useState<string | null>(
+    defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
+  );
+
+  const currentTabParams =
+    tabs?.find((tab) => tab.value === activeTab)?.queryParams || {};
+  const allQueryParams = { ...queryParams, ...currentTabParams };
 
   // Build query string like ?id=1&name=test
-  const queryString: string = queryParams
-      ? '?' + Object.entries(queryParams)
-      .filter(([, value]) => value !== null && value !== undefined)
-      .map(([key, value]) => `${key}=${encodeURIComponent(value ?? '')}`)
-      .join('&')
-      : '';
+  const queryString: string = allQueryParams
+    ? "?" +
+      Object.entries(allQueryParams)
+        .filter(([, value]) => value !== null && value !== undefined)
+        .map(([key, value]) => `${key}=${encodeURIComponent(value ?? "")}`)
+        .join("&")
+    : "";
 
   const {
     data: allData,
@@ -178,7 +198,7 @@ export function DataTableInner<T extends BaseEntity>({
               }
             }
             return true;
-          }  else if (filter.type === "boolean") {
+          } else if (filter.type === "boolean") {
             const recordValue = record[key];
             return recordValue === filter.value;
           }
@@ -186,7 +206,7 @@ export function DataTableInner<T extends BaseEntity>({
         }),
       ),
     );
-  }, [allData, filters, queryParams]);
+  }, [allData, filters, allQueryParams]);
 
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
@@ -237,6 +257,11 @@ export function DataTableInner<T extends BaseEntity>({
       ),
     );
   }, [sortedData]);
+
+  // Reset selection when tab changes
+  useEffect(() => {
+    setSelectedRecords([]);
+  }, [activeTab]);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
@@ -312,6 +337,22 @@ export function DataTableInner<T extends BaseEntity>({
           {buttons}
         </Group>
       </Group>
+
+      {tabs && tabs.length > 0 && (
+        <Tabs value={activeTab} onChange={setActiveTab} mt="md">
+          <Tabs.List>
+            {tabs.map((tab) => (
+              <Tabs.Tab
+                key={tab.value}
+                value={tab.value}
+                leftSection={tab.icon}
+              >
+                {tab.label}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs>
+      )}
 
       {isError && (
         <Alert
@@ -399,15 +440,15 @@ export function DataTableInner<T extends BaseEntity>({
           }}
           title={title ?? "Löschen"}
         >
-            <DeleteModal<T>
-              onClose={() => {
-                setDeleteModalOpen(false);
-                setSelectedRecords([]);
-              }}
-              queryKey={queryKey}
-              apiPath={apiPath}
-              selectedRecords={selectedRecords}
-            />
+          <DeleteModal<T>
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setSelectedRecords([]);
+            }}
+            queryKey={queryKey}
+            apiPath={apiPath}
+            selectedRecords={selectedRecords}
+          />
         </Modal>
       )}
 
