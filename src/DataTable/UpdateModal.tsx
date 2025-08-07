@@ -106,14 +106,26 @@ export function UpdateModal<T extends BaseEntity>({
 
   // Create a wrapper for setValues that updates our watched state
   const setFormValues = useCallback((values: Partial<T>) => {
+    console.log("[UpdateModal] setFormValues called with:", values);
     form.setValues(values);
-    setWatchedValues(prev => ({ ...prev, ...values }));
+    setWatchedValues(prev => {
+      const newValues = { ...prev, ...values };
+      console.log("[UpdateModal] updating watchedValues:", newValues);
+      return newValues;
+    });
   }, [form]);
   
   function renderField(field: Field<T>) {
     // Use watched values for conditional evaluation
     const currentValues = { ...form.getValues(), ...watchedValues };
+    console.log(`[UpdateModal] renderField ${field.id}:`, {
+      hasConditional: !!field.conditional,
+      currentValues,
+      watchedValues,
+      formValues: form.getValues()
+    });
     if (field.conditional && !field.conditional(currentValues)) {
+      console.log(`[UpdateModal] Field ${field.id} hidden by conditional`);
       return null;
     }
     return (

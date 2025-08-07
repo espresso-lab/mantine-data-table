@@ -82,14 +82,26 @@ export function CreateModal<T extends BaseEntity>({
 
   // Create a wrapper for setValues that updates our watched state
   const setFormValues = useCallback((values: Partial<T>) => {
+    console.log("[CreateModal] setFormValues called with:", values);
     form.setValues(values);
-    setWatchedValues(prev => ({ ...prev, ...values }));
+    setWatchedValues(prev => {
+      const newValues = { ...prev, ...values };
+      console.log("[CreateModal] updating watchedValues:", newValues);
+      return newValues;
+    });
   }, [form]);
   
   function renderField(field: Field<T>) {
     // Use watched values for conditional evaluation
     const currentValues = { ...form.getValues(), ...watchedValues };
+    console.log(`[CreateModal] renderField ${field.id}:`, {
+      hasConditional: !!field.conditional,
+      currentValues,
+      watchedValues,
+      formValues: form.getValues()
+    });
     if (field.conditional && !field.conditional(currentValues)) {
+      console.log(`[CreateModal] Field ${field.id} hidden by conditional`);
       return null;
     }
     return (
