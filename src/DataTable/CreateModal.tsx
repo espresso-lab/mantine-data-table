@@ -143,6 +143,10 @@ export function CreateModal<T extends BaseEntity>({
             { ...form.getValues(), ...(recordId && { id: recordId }) } as T,
             form.setValues,
             setHideButtons,
+            {
+              error: form.getInputProps(field.id as string).error,
+              required: field.required,
+            },
           )}
       </Fragment>
     );

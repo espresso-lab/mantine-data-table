@@ -70,6 +70,10 @@ export interface Field<T> {
     values: T,
     setValues: (values: Partial<T>) => void,
     hideButtons: (value: boolean) => void,
+    validationProps?: {
+      error?: string;
+      required?: boolean;
+    },
   ) => React.ReactNode;
   column: DataTableColumn<T>;
 }
