@@ -10,7 +10,7 @@ import {
   Textarea,
   TextInput
 } from "@mantine/core";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useGetOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
@@ -38,7 +38,7 @@ export function UpdateModal<T extends BaseEntity>({
 }: UpdateModalProps<T>) {
   const [active, setActive] = useState<number>(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
-  const [conditionalValues, setConditionalValues] = useState<Partial<T>>({});
+  const [watchedValues, setWatchedValues] = useState<Partial<T>>({});
 
   const { data, isLoading: isDataLoading } = useGetOne<T>(
     apiPath,
@@ -100,13 +100,20 @@ export function UpdateModal<T extends BaseEntity>({
       }, {} as T);
       form.initialize(values);
       form.setValues(values);
-      setConditionalValues(values);
+      setWatchedValues(values);
     }
   }, [data]);
 
+  // Create a wrapper for setValues that updates our watched state
+  const setFormValues = useCallback((values: Partial<T>) => {
+    form.setValues(values);
+    setWatchedValues(prev => ({ ...prev, ...values }));
+  }, [form]);
+  
   function renderField(field: Field<T>) {
-    const formValues = { ...form.getValues(), ...conditionalValues };
-    if (field.conditional && !field.conditional(formValues)) {
+    // Use watched values for conditional evaluation
+    const currentValues = { ...form.getValues(), ...watchedValues };
+    if (field.conditional && !field.conditional(currentValues)) {
       return null;
     }
     return (
@@ -166,10 +173,7 @@ export function UpdateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), id } as T,
-            (values) => {
-              form.setValues(values);
-              setConditionalValues((prev) => ({ ...prev, ...values }));
-            },
+            setFormValues,
             setHideButtons,
           )}
       </Fragment>
