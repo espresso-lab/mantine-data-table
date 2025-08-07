@@ -7,8 +7,8 @@ import {
   Skeleton,
   Stack,
   Stepper,
-  TextInput,
   Textarea,
+  TextInput
 } from "@mantine/core";
 import { Fragment, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
@@ -38,6 +38,7 @@ export function UpdateModal<T extends BaseEntity>({
 }: UpdateModalProps<T>) {
   const [active, setActive] = useState<number>(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
+  const [conditionalValues, setConditionalValues] = useState<Partial<T>>({});
 
   const { data, isLoading: isDataLoading } = useGetOne<T>(
     apiPath,
@@ -102,13 +103,11 @@ export function UpdateModal<T extends BaseEntity>({
     }
   }, [data]);
 
-  function shouldShowField(field: Field<T>): boolean {
-    if (!field.conditional) return true;
-    return field.conditional(form.getValues());
-  }
-
   function renderField(field: Field<T>) {
-    if (!shouldShowField(field)) return null;
+    const formValues = { ...form.getValues(), ...conditionalValues };
+    if (field.conditional && !field.conditional(formValues)) {
+      return null;
+    }
     return (
       <Fragment key={field.id}>
         {(field.type === undefined || field.type == "text") && (
@@ -166,7 +165,10 @@ export function UpdateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), id } as T,
-            form.setValues,
+            (values) => {
+              form.setValues(values);
+              setConditionalValues((prev) => ({ ...prev, ...values }));
+            },
             setHideButtons,
           )}
       </Fragment>
