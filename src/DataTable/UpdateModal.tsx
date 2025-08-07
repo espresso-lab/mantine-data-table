@@ -100,6 +100,7 @@ export function UpdateModal<T extends BaseEntity>({
       }, {} as T);
       form.initialize(values);
       form.setValues(values);
+      setConditionalValues(values);
     }
   }, [data]);
 
