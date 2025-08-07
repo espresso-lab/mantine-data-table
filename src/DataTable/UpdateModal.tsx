@@ -10,7 +10,7 @@ import {
   Textarea,
   TextInput
 } from "@mantine/core";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useGetOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
@@ -38,7 +38,6 @@ export function UpdateModal<T extends BaseEntity>({
 }: UpdateModalProps<T>) {
   const [active, setActive] = useState<number>(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
-  const [watchedValues, setWatchedValues] = useState<Partial<T>>({});
 
   const { data, isLoading: isDataLoading } = useGetOne<T>(
     apiPath,
@@ -83,55 +82,32 @@ export function UpdateModal<T extends BaseEntity>({
 
   useEffect(() => {
     if (data) {
-      console.log("[UpdateModal] Processing API data:", data);
-      console.log("[UpdateModal] Available fields:", fields.map(f => f.id));
-      const values = fields.reduce((acc, field) => {
+
+      // Start with all API data, then process field-specific transformations
+      const values = { ...data } as T;
+      
+      // Apply field-specific transformations for defined fields
+      fields.forEach((field) => {
         const key = field.id as keyof T;
-        acc[key] = Array.isArray(data[key])
-          ? data[key]
-          : field.type === "boolean"
-            ? (data[key] ?? (false as T[keyof T]))
-            : field.type === "date"
-              ? data[key]
-                ? (new Date(
-                    data[key] as unknown as string,
-                  ) as unknown as T[keyof T])
-                : ("" as T[keyof T])
-              : (data[key] ?? ("" as T[keyof T]));
-        return acc;
-      }, {} as T);
-      console.log("[UpdateModal] Final form values:", values);
+        if (field.type === "boolean" && values[key] === null) {
+          values[key] = false as T[keyof T];
+        } else if (field.type === "date" && values[key]) {
+          values[key] = new Date(values[key] as unknown as string) as unknown as T[keyof T];
+        } else if (values[key] === null) {
+          values[key] = "" as T[keyof T];
+        }
+      });
       form.initialize(values);
       form.setValues(values);
-      setWatchedValues(values);
     }
   }, [data]);
 
-  // Create a wrapper for setValues that updates our watched state
-  const setFormValues = useCallback((values: Partial<T>) => {
-    console.log("[UpdateModal] setFormValues called with:", values);
-    form.setValues(values);
-    setWatchedValues(prev => {
-      const newValues = { ...prev, ...values };
-      console.log("[UpdateModal] updating watchedValues:", newValues);
-      return newValues;
-    });
-  }, [form]);
+
   
   function renderField(field: Field<T>) {
-    // Use watched values for conditional evaluation
-    const currentValues = { ...form.getValues(), ...watchedValues };
-    if (field.conditional) {
-      const conditionalResult = field.conditional(currentValues);
-      console.log(`[UpdateModal] Field ${field.id} conditional evaluation:`, {
-        currentValues,
-        type: (currentValues as any).type,
-        conditionalResult,
-        willShow: conditionalResult
-      });
-      if (!conditionalResult) {
-        return null;
-      }
+    const formValues = form.getValues();
+    if (field.conditional && !field.conditional(formValues)) {
+      return null;
     }
     return (
       <Fragment key={field.id}>
@@ -190,7 +166,7 @@ export function UpdateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), id } as T,
-            setFormValues,
+            form.setValues,
             setHideButtons,
           )}
       </Fragment>
