@@ -168,6 +168,10 @@ export function UpdateModal<T extends BaseEntity>({
             { ...form.getValues(), id } as T,
             form.setValues,
             setHideButtons,
+            {
+              error: form.getInputProps(field.id as string).error,
+              required: field.required,
+            },
           )}
       </Fragment>
     );
