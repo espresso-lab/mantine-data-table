@@ -83,6 +83,8 @@ export function UpdateModal<T extends BaseEntity>({
 
   useEffect(() => {
     if (data) {
+      console.log("[UpdateModal] Processing API data:", data);
+      console.log("[UpdateModal] Available fields:", fields.map(f => f.id));
       const values = fields.reduce((acc, field) => {
         const key = field.id as keyof T;
         acc[key] = Array.isArray(data[key])
@@ -98,6 +100,7 @@ export function UpdateModal<T extends BaseEntity>({
               : (data[key] ?? ("" as T[keyof T]));
         return acc;
       }, {} as T);
+      console.log("[UpdateModal] Final form values:", values);
       form.initialize(values);
       form.setValues(values);
       setWatchedValues(values);
@@ -118,15 +121,17 @@ export function UpdateModal<T extends BaseEntity>({
   function renderField(field: Field<T>) {
     // Use watched values for conditional evaluation
     const currentValues = { ...form.getValues(), ...watchedValues };
-    console.log(`[UpdateModal] renderField ${field.id}:`, {
-      hasConditional: !!field.conditional,
-      currentValues,
-      watchedValues,
-      formValues: form.getValues()
-    });
-    if (field.conditional && !field.conditional(currentValues)) {
-      console.log(`[UpdateModal] Field ${field.id} hidden by conditional`);
-      return null;
+    if (field.conditional) {
+      const conditionalResult = field.conditional(currentValues);
+      console.log(`[UpdateModal] Field ${field.id} conditional evaluation:`, {
+        currentValues,
+        type: (currentValues as any).type,
+        conditionalResult,
+        willShow: conditionalResult
+      });
+      if (!conditionalResult) {
+        return null;
+      }
     }
     return (
       <Fragment key={field.id}>
