@@ -5,8 +5,8 @@ import {
   Group,
   NumberInput,
   Stepper,
-  TextInput,
   Textarea,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
@@ -36,6 +36,7 @@ export function CreateModal<T extends BaseEntity>({
   const [active, setActive] = useState(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
   const [recordId, setRecordId] = useState<string | number>();
+  const [conditionalValues, setConditionalValues] = useState<Partial<T>>({});
 
   const {
     mutateAsync: create,
@@ -79,13 +80,11 @@ export function CreateModal<T extends BaseEntity>({
       ),
   });
 
-  function shouldShowField(field: Field<T>): boolean {
-    if (!field.conditional) return true;
-    return field.conditional(form.getValues());
-  }
-
   function renderField(field: Field<T>) {
-    if (!shouldShowField(field)) return null;
+    const formValues = { ...form.getValues(), ...conditionalValues };
+    if (field.conditional && !field.conditional(formValues)) {
+      return null;
+    }
     return (
       <Fragment key={field.id}>
         {(field.type === undefined || field.type == "text") && (
@@ -143,7 +142,10 @@ export function CreateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), ...(recordId && { id: recordId }) } as T,
-            form.setValues,
+            (values) => {
+              form.setValues(values);
+              setConditionalValues((prev) => ({ ...prev, ...values }));
+            },
             setHideButtons,
           )}
       </Fragment>
