@@ -229,13 +229,13 @@ export function UpdateModal<T extends BaseEntity>({
                     : {})}
                 >
                   {fields
-                    .filter((f) => f.step === step && shouldShowField(f))
+                    .filter((f) => f.step === step)
                     .map((field) => renderField(field))}
                 </Stepper.Step>
               ))}
             </Stepper>
           ) : (
-            fields.filter(shouldShowField).map((field) => renderField(field))
+            fields.map((field) => renderField(field))
           )}
           {!hideButtons && (
             <Group mt="md" justify="end">
