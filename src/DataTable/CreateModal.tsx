@@ -11,7 +11,7 @@ import {
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
-import { Fragment, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+import { Fragment, useCallback, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
@@ -36,7 +36,7 @@ export function CreateModal<T extends BaseEntity>({
   const [active, setActive] = useState(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
   const [recordId, setRecordId] = useState<string | number>();
-  const [conditionalValues, setConditionalValues] = useState<Partial<T>>({});
+  const [watchedValues, setWatchedValues] = useState<Partial<T>>({});
 
   const {
     mutateAsync: create,
@@ -80,9 +80,16 @@ export function CreateModal<T extends BaseEntity>({
       ),
   });
 
+  // Create a wrapper for setValues that updates our watched state
+  const setFormValues = useCallback((values: Partial<T>) => {
+    form.setValues(values);
+    setWatchedValues(prev => ({ ...prev, ...values }));
+  }, [form]);
+  
   function renderField(field: Field<T>) {
-    const formValues = { ...form.getValues(), ...conditionalValues };
-    if (field.conditional && !field.conditional(formValues)) {
+    // Use watched values for conditional evaluation
+    const currentValues = { ...form.getValues(), ...watchedValues };
+    if (field.conditional && !field.conditional(currentValues)) {
       return null;
     }
     return (
@@ -142,10 +149,7 @@ export function CreateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), ...(recordId && { id: recordId }) } as T,
-            (values) => {
-              form.setValues(values);
-              setConditionalValues((prev) => ({ ...prev, ...values }));
-            },
+            setFormValues,
             setHideButtons,
           )}
       </Fragment>
