@@ -11,7 +11,7 @@ import {
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
-import { Fragment, useCallback, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+import { Fragment, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
@@ -36,7 +36,6 @@ export function CreateModal<T extends BaseEntity>({
   const [active, setActive] = useState(0);
   const [hideButtons, setHideButtons] = useState<boolean>(false);
   const [recordId, setRecordId] = useState<string | number>();
-  const [watchedValues, setWatchedValues] = useState<Partial<T>>({});
 
   const {
     mutateAsync: create,
@@ -80,28 +79,9 @@ export function CreateModal<T extends BaseEntity>({
       ),
   });
 
-  // Create a wrapper for setValues that updates our watched state
-  const setFormValues = useCallback((values: Partial<T>) => {
-    console.log("[CreateModal] setFormValues called with:", values);
-    form.setValues(values);
-    setWatchedValues(prev => {
-      const newValues = { ...prev, ...values };
-      console.log("[CreateModal] updating watchedValues:", newValues);
-      return newValues;
-    });
-  }, [form]);
-  
   function renderField(field: Field<T>) {
-    // Use watched values for conditional evaluation
-    const currentValues = { ...form.getValues(), ...watchedValues };
-    console.log(`[CreateModal] renderField ${field.id}:`, {
-      hasConditional: !!field.conditional,
-      currentValues,
-      watchedValues,
-      formValues: form.getValues()
-    });
-    if (field.conditional && !field.conditional(currentValues)) {
-      console.log(`[CreateModal] Field ${field.id} hidden by conditional`);
+    const formValues = form.getValues();
+    if (field.conditional && !field.conditional(formValues)) {
       return null;
     }
     return (
@@ -161,7 +141,7 @@ export function CreateModal<T extends BaseEntity>({
           field.render &&
           field.render(
             { ...form.getValues(), ...(recordId && { id: recordId }) } as T,
-            setFormValues,
+            form.setValues,
             setHideButtons,
           )}
       </Fragment>
