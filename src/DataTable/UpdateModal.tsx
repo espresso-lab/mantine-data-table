@@ -8,6 +8,7 @@ import {
   Stack,
   Stepper,
   TextInput,
+  Textarea,
 } from "@mantine/core";
 import { Fragment, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
@@ -147,6 +148,17 @@ export function UpdateModal<T extends BaseEntity>({
             label={field.column.title}
             key={form.key(field.id)}
             {...form.getInputProps(field.id as string, { type: "checkbox" })}
+          />
+        )}
+
+        {field.type === "textarea" && (
+          <Textarea
+            label={field.column.title}
+            placeholder={field.placeholder ?? ""}
+            key={form.key(field.id)}
+            {...form.getInputProps(field.id as string)}
+            minRows={3}
+            autosize
           />
         )}
 

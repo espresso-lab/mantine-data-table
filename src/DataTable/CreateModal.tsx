@@ -6,6 +6,7 @@ import {
   NumberInput,
   Stepper,
   TextInput,
+  Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
@@ -124,6 +125,17 @@ export function CreateModal<T extends BaseEntity>({
             label={field.column.title}
             key={form.key(field.id)}
             {...form.getInputProps(field.id as string, { type: "checkbox" })}
+          />
+        )}
+
+        {field.type === "textarea" && (
+          <Textarea
+            label={field.column.title}
+            placeholder={field.placeholder ?? ""}
+            key={form.key(field.id)}
+            {...form.getInputProps(field.id as string)}
+            minRows={3}
+            autosize
           />
         )}
 

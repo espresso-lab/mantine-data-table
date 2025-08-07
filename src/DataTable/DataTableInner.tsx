@@ -52,7 +52,7 @@ interface BooleanFilter {
 
 type Filter = DateFilter | StringFilter | BooleanFilter;
 
-export type FieldType = "text" | "number" | "boolean" | "custom" | "date";
+export type FieldType = "text" | "number" | "boolean" | "custom" | "date" | "textarea";
 
 export interface Field<T> {
   id: string;
