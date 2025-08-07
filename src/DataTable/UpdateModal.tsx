@@ -101,7 +101,13 @@ export function UpdateModal<T extends BaseEntity>({
     }
   }, [data]);
 
+  function shouldShowField(field: Field<T>): boolean {
+    if (!field.conditional) return true;
+    return field.conditional(form.getValues());
+  }
+
   function renderField(field: Field<T>) {
+    if (!shouldShowField(field)) return null;
     return (
       <Fragment key={field.id}>
         {(field.type === undefined || field.type == "text") && (
@@ -211,13 +217,13 @@ export function UpdateModal<T extends BaseEntity>({
                     : {})}
                 >
                   {fields
-                    .filter((f) => f.step === step)
+                    .filter((f) => f.step === step && shouldShowField(f))
                     .map((field) => renderField(field))}
                 </Stepper.Step>
               ))}
             </Stepper>
           ) : (
-            fields.map((field) => renderField(field))
+            fields.filter(shouldShowField).map((field) => renderField(field))
           )}
           {!hideButtons && (
             <Group mt="md" justify="end">
