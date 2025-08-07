@@ -72,8 +72,12 @@ export function UpdateModal<T extends BaseEntity>({
       .filter((field) => field.required)
       .reduce(
         (acc, field) => {
-          acc[field.id as keyof T] = (value: never) =>
-            value ? null : "Pflichtfeld";
+          acc[field.id as keyof T] = (value: never, values: T) => {
+            if (field.conditional && !field.conditional(values)) {
+              return null;
+            }
+            return value ? null : "Pflichtfeld";
+          };
           return acc;
         },
         {} as Partial<{ [Key in keyof T]: FormRule<T[Key], T> }>,
