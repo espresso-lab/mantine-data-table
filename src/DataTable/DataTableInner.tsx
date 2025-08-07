@@ -65,6 +65,7 @@ export interface Field<T> {
   delete: boolean;
   type?: FieldType;
   placeholder?: string;
+  conditional?: (values: Partial<T>) => boolean;
   render?: (
     values: T,
     setValues: (values: Partial<T>) => void,
