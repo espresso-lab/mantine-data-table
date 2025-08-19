@@ -19,7 +19,7 @@ import { Field, StepConfig } from "./DataTableInner.tsx";
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
 
-interface UpdateModalProps<T> {
+export interface UpdateModalProps<T> {
   fields: Field<T>[];
   steps?: StepConfig[];
   onClose: () => void;
