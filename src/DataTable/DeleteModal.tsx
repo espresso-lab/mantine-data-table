@@ -9,6 +9,8 @@ interface DeleteModalProps<T> {
   selectedRecords: T[];
 }
 
+export type { DeleteModalProps };
+
 export function DeleteModal<T extends BaseEntity>({
   queryKey,
   apiPath,
