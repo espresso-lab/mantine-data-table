@@ -2,14 +2,12 @@ import { Alert, Button, Group, Text } from "@mantine/core";
 import { BaseEntity, useDeleteOne } from "../Hooks/useApi";
 import { useEffect, useState } from "react";
 
-interface DeleteModalProps<T> {
+export interface DeleteModalProps<T> {
   onClose: () => void;
   queryKey: (string | number)[];
   apiPath: string;
   selectedRecords: T[];
 }
-
-export type { DeleteModalProps };
 
 export function DeleteModal<T extends BaseEntity>({
   queryKey,
