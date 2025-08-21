@@ -21,6 +21,24 @@ export async function getApiHeaders() {
   };
 }
 
+// Helper function to handle error responses consistently
+async function handleErrorResponse(resp: Response): Promise<never> {
+  try {
+    // Try to parse as JSON first (for custom Error responses)
+    const errorJson = await resp.json();
+    if (errorJson.message) {
+      throw new Error(errorJson.message);
+    } else {
+      throw new Error(errorJson.toString());
+    }
+  } catch {
+    // Clone the response before trying to read as text
+    const clonedResp = resp.clone();
+    const errorText = await clonedResp.text();
+    throw new Error(errorText);
+  }
+}
+
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   return fetch(path, {
     method: "GET",
@@ -28,19 +46,7 @@ export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        try {
-          // Try to parse as JSON first (for custom Error responses)
-          const errorJson = await resp.json();
-          if (errorJson.message) {
-            throw new Error(errorJson.message);
-          } else {
-            throw new Error(errorJson.toString());
-          }
-        } catch {
-          // Fallback to text if JSON parsing fails
-          const errorText = await resp.text();
-          throw new Error(errorText);
-        }
+        await handleErrorResponse(resp);
       }
       return resp;
     })
@@ -58,19 +64,7 @@ export async function getOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        try {
-          // Try to parse as JSON first (for custom Error responses)
-          const errorJson = await resp.json();
-          if (errorJson.message) {
-            throw new Error(errorJson.message);
-          } else {
-            throw new Error(errorJson.toString());
-          }
-        } catch {
-          // Fallback to text if JSON parsing fails
-          const errorText = await resp.text();
-          throw new Error(errorText);
-        }
+        await handleErrorResponse(resp);
       }
       return resp;
     })
@@ -88,19 +82,7 @@ export async function deleteOne(
   });
   
   if (resp.status >= 400) {
-    try {
-      // Try to parse as JSON first (for custom Error responses)
-      const errorJson = await resp.json();
-      if (errorJson.message) {
-        throw new Error(errorJson.message);
-      } else {
-        throw new Error(errorJson.toString());
-      }
-    } catch {
-      // Fallback to text if JSON parsing fails
-      const errorText = await resp.text();
-      throw new Error(errorText);
-    }
+    await handleErrorResponse(resp);
   }
 }
 
@@ -115,19 +97,7 @@ export async function createOne<C, T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        try {
-          // Try to parse as JSON first (for custom Error responses)
-          const errorJson = await resp.json();
-          if (errorJson.message) {
-            throw new Error(errorJson.message);
-          } else {
-            throw new Error(errorJson.toString());
-          }
-        } catch {
-          // Fallback to text if JSON parsing fails
-          const errorText = await resp.text();
-          throw new Error(errorText);
-        }
+        await handleErrorResponse(resp);
       }
       return resp;
     })
@@ -153,19 +123,7 @@ export async function api<R, U>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        try {
-          // Try to parse as JSON first (for custom Error responses)
-          const errorJson = await resp.json();
-          if (errorJson.message) {
-            throw new Error(errorJson.message);
-          } else {
-            throw new Error(errorJson.toString());
-          }
-        } catch {
-          // Fallback to text if JSON parsing fails
-          const errorText = await resp.text();
-          throw new Error(errorText);
-        }
+        await handleErrorResponse(resp);
       }
       return resp;
     })
@@ -190,19 +148,7 @@ export async function updateOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        try {
-          // Try to parse as JSON first (for custom Error responses)
-          const errorJson = await resp.json();
-          if (errorJson.message) {
-            throw new Error(errorJson.message);
-          } else {
-            throw new Error(errorJson.toString());
-          }
-        } catch {
-          // Fallback to text if JSON parsing fails
-          const errorText = await resp.text();
-          throw new Error(errorText);
-        }
+        await handleErrorResponse(resp);
       }
       return resp;
     })
