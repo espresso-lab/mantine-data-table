@@ -28,7 +28,19 @@ export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        try {
+          // Try to parse as JSON first (for custom Error responses)
+          const errorJson = await resp.json();
+          if (errorJson.message) {
+            throw new Error(errorJson.message);
+          } else {
+            throw new Error(errorJson.toString());
+          }
+        } catch {
+          // Fallback to text if JSON parsing fails
+          const errorText = await resp.text();
+          throw new Error(errorText);
+        }
       }
       return resp;
     })
@@ -46,8 +58,19 @@ export async function getOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        const errorText = await resp.text();
-        throw new Error(errorText);
+        try {
+          // Try to parse as JSON first (for custom Error responses)
+          const errorJson = await resp.json();
+          if (errorJson.message) {
+            throw new Error(errorJson.message);
+          } else {
+            throw new Error(errorJson.toString());
+          }
+        } catch {
+          // Fallback to text if JSON parsing fails
+          const errorText = await resp.text();
+          throw new Error(errorText);
+        }
       }
       return resp;
     })
@@ -59,16 +82,26 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  await fetch(`${path}/${id}`, {
+  const resp = await fetch(`${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
-  }).then(async (resp) => {
-    if (resp.status >= 400) {
+  });
+  
+  if (resp.status >= 400) {
+    try {
+      // Try to parse as JSON first (for custom Error responses)
+      const errorJson = await resp.json();
+      if (errorJson.message) {
+        throw new Error(errorJson.message);
+      } else {
+        throw new Error(errorJson.toString());
+      }
+    } catch {
+      // Fallback to text if JSON parsing fails
       const errorText = await resp.text();
       throw new Error(errorText);
     }
-    return resp;
-  });
+  }
 }
 
 export async function createOne<C, T extends BaseEntity>(
@@ -82,8 +115,19 @@ export async function createOne<C, T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        const errorText = await resp.text();
-        throw new Error(errorText);
+        try {
+          // Try to parse as JSON first (for custom Error responses)
+          const errorJson = await resp.json();
+          if (errorJson.message) {
+            throw new Error(errorJson.message);
+          } else {
+            throw new Error(errorJson.toString());
+          }
+        } catch {
+          // Fallback to text if JSON parsing fails
+          const errorText = await resp.text();
+          throw new Error(errorText);
+        }
       }
       return resp;
     })
@@ -109,8 +153,19 @@ export async function api<R, U>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        const errorText = await resp.text();
-        throw new Error(errorText);
+        try {
+          // Try to parse as JSON first (for custom Error responses)
+          const errorJson = await resp.json();
+          if (errorJson.message) {
+            throw new Error(errorJson.message);
+          } else {
+            throw new Error(errorJson.toString());
+          }
+        } catch {
+          // Fallback to text if JSON parsing fails
+          const errorText = await resp.text();
+          throw new Error(errorText);
+        }
       }
       return resp;
     })
@@ -135,8 +190,19 @@ export async function updateOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        const errorText = await resp.text();
-        throw new Error(errorText);
+        try {
+          // Try to parse as JSON first (for custom Error responses)
+          const errorJson = await resp.json();
+          if (errorJson.message) {
+            throw new Error(errorJson.message);
+          } else {
+            throw new Error(errorJson.toString());
+          }
+        } catch {
+          // Fallback to text if JSON parsing fails
+          const errorText = await resp.text();
+          throw new Error(errorText);
+        }
       }
       return resp;
     })
