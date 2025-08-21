@@ -21,32 +21,6 @@ export async function getApiHeaders() {
   };
 }
 
-// Helper function to handle error responses consistently
-async function handleErrorResponse(resp: Response): Promise<never> {
-  // Read the response body as text first, then try to parse as JSON
-  const responseText = await resp.text();
-  
-  if (!responseText) {
-    // No body content, use status info
-    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-  }
-  
-  try {
-    // Try to parse as JSON
-    const errorJson = JSON.parse(responseText);
-    if (errorJson.message) {
-      throw new Error(errorJson.message);
-    } else if (errorJson.error) {
-      throw new Error(errorJson.error);
-    } else {
-      throw new Error(responseText);
-    }
-  } catch {
-    // Not valid JSON, use the raw text
-    throw new Error(responseText);
-  }
-}
-
 export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   return fetch(path, {
     method: "GET",
@@ -54,7 +28,7 @@ export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        await handleErrorResponse(resp);
+        throw await resp.text();
       }
       return resp;
     })
@@ -72,7 +46,7 @@ export async function getOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        await handleErrorResponse(resp);
+        throw await resp.text();
       }
       return resp;
     })
@@ -84,14 +58,15 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  const resp = await fetch(`${path}/${id}`, {
+  await fetch(`${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
+  }).then(async (resp) => {
+    if (resp.status >= 400) {
+      throw await resp.text();
+    }
+    return resp;
   });
-  
-  if (resp.status >= 400) {
-    await handleErrorResponse(resp);
-  }
 }
 
 export async function createOne<C, T extends BaseEntity>(
@@ -105,7 +80,7 @@ export async function createOne<C, T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        await handleErrorResponse(resp);
+        throw await resp.text();
       }
       return resp;
     })
@@ -131,7 +106,7 @@ export async function api<R, U>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        await handleErrorResponse(resp);
+        throw await resp.text();
       }
       return resp;
     })
@@ -156,7 +131,7 @@ export async function updateOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        await handleErrorResponse(resp);
+        throw await resp.text();
       }
       return resp;
     })
