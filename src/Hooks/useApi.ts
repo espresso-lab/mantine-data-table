@@ -17,6 +17,33 @@ export function parseApiError(error: unknown): { message: string; code?: string;
   }
   return { message: "Unbekannter Fehler" };
 }
+
+// Helper function to handle HTTP error responses consistently
+async function handleHttpError(resp: Response): Promise<never> {
+  // Read the response body as text first, then try to parse as JSON
+  // This approach avoids the "body already consumed" issue entirely
+  const responseText = await resp.text();
+  
+  if (!responseText) {
+    // No body content, use status info
+    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+  }
+  
+  try {
+    // Try to parse as JSON
+    const errorJson = JSON.parse(responseText);
+    if (errorJson.message) {
+      throw new Error(errorJson.message);
+    } else if (errorJson.error) {
+      throw new Error(errorJson.error);
+    } else {
+      throw new Error(responseText);
+    }
+  } catch {
+    // Not valid JSON, use the raw text
+    throw new Error(responseText);
+  }
+}
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getIdToken } from "@espresso-lab/mantine-cognito";
 import { useDataTable } from "./useDataTable.ts";
@@ -47,7 +74,7 @@ export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        await handleHttpError(resp);
       }
       return resp;
     })
@@ -65,7 +92,7 @@ export async function getOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        await handleHttpError(resp);
       }
       return resp;
     })
@@ -77,15 +104,14 @@ export async function deleteOne(
   path: string,
   id: string | number,
 ): Promise<void> {
-  await fetch(`${path}/${id}`, {
+  const resp = await fetch(`${path}/${id}`, {
     method: "DELETE",
     headers: await getApiHeaders(),
-  }).then(async (resp) => {
-    if (resp.status >= 400) {
-      throw await resp.text();
-    }
-    return resp;
   });
+  
+  if (resp.status >= 400) {
+    await handleHttpError(resp);
+  }
 }
 
 export async function createOne<C, T extends BaseEntity>(
@@ -99,7 +125,7 @@ export async function createOne<C, T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        await handleHttpError(resp);
       }
       return resp;
     })
@@ -125,7 +151,7 @@ export async function api<R, U>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        await handleHttpError(resp);
       }
       return resp;
     })
@@ -150,7 +176,7 @@ export async function updateOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        await handleHttpError(resp);
       }
       return resp;
     })
