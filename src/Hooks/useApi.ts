@@ -23,19 +23,27 @@ export async function getApiHeaders() {
 
 // Helper function to handle error responses consistently
 async function handleErrorResponse(resp: Response): Promise<never> {
+  // Read the response body as text first, then try to parse as JSON
+  const responseText = await resp.text();
+  
+  if (!responseText) {
+    // No body content, use status info
+    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+  }
+  
   try {
-    // Try to parse as JSON first (for custom Error responses)
-    const errorJson = await resp.json();
+    // Try to parse as JSON
+    const errorJson = JSON.parse(responseText);
     if (errorJson.message) {
       throw new Error(errorJson.message);
+    } else if (errorJson.error) {
+      throw new Error(errorJson.error);
     } else {
-      throw new Error(errorJson.toString());
+      throw new Error(responseText);
     }
   } catch {
-    // Clone the response before trying to read as text
-    const clonedResp = resp.clone();
-    const errorText = await clonedResp.text();
-    throw new Error(errorText);
+    // Not valid JSON, use the raw text
+    throw new Error(responseText);
   }
 }
 
