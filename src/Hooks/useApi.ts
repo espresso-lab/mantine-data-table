@@ -1,3 +1,22 @@
+// Utility to parse API errors into a standard object
+export function parseApiError(error: unknown): { message: string; code?: string; details?: any } {
+  if (typeof error === "string") {
+    try {
+      const parsed = JSON.parse(error);
+      return {
+        message: parsed.message || error,
+        code: parsed.code,
+        details: parsed.details,
+      };
+    } catch {
+      return { message: error };
+    }
+  }
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+  return { message: "Unbekannter Fehler" };
+}
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getIdToken } from "@espresso-lab/mantine-cognito";
 import { useDataTable } from "./useDataTable.ts";
@@ -183,6 +202,10 @@ export function useAddOne<T extends BaseEntity>(
         queryKey: [...queryKey.map((k) => k.toString())],
       });
     },
+    onError(error) {
+      // Optionally log or handle globally
+      parseApiError(error);
+    },
   });
 }
 
@@ -200,6 +223,9 @@ export function useUpdateOne<T extends BaseEntity>(
         queryKey: [...queryKey.map((k) => k.toString())],
       });
     },
+    onError(error) {
+      parseApiError(error);
+    },
   });
 }
 
@@ -215,6 +241,9 @@ export function useDeleteOne(
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
       });
+    },
+    onError(error) {
+      parseApiError(error);
     },
   });
 }
