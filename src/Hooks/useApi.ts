@@ -46,7 +46,8 @@ export async function getOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        const errorText = await resp.text();
+        throw new Error(errorText);
       }
       return resp;
     })
@@ -63,7 +64,8 @@ export async function deleteOne(
     headers: await getApiHeaders(),
   }).then(async (resp) => {
     if (resp.status >= 400) {
-      throw await resp.text();
+      const errorText = await resp.text();
+      throw new Error(errorText);
     }
     return resp;
   });
@@ -80,7 +82,8 @@ export async function createOne<C, T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        const errorText = await resp.text();
+        throw new Error(errorText);
       }
       return resp;
     })
@@ -106,7 +109,8 @@ export async function api<R, U>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        const errorText = await resp.text();
+        throw new Error(errorText);
       }
       return resp;
     })
@@ -131,7 +135,8 @@ export async function updateOne<T extends BaseEntity>(
   })
     .then(async (resp) => {
       if (resp.status >= 400) {
-        throw await resp.text();
+        const errorText = await resp.text();
+        throw new Error(errorText);
       }
       return resp;
     })
