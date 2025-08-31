@@ -224,10 +224,6 @@ export function DataTableInner<T extends BaseEntity>({
                   return false;
                 });
               }
-              // If record value is a string, check if it's in the filter values
-              if (typeof recordValue === "string") {
-                return filter.value.includes(recordValue);
-              }
               // If record value is an object with an id, check if the id is in filter values
               if (
                 recordValue &&
@@ -242,7 +238,6 @@ export function DataTableInner<T extends BaseEntity>({
             // Handle string filters
             return (
               typeof recordValue === "string" &&
-              typeof filter.value === "string" &&
               recordValue.includes(filter.value)
             );
           } else if (filter.type === "date") {
