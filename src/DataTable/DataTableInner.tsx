@@ -192,30 +192,27 @@ export function DataTableInner<T extends BaseEntity>({
           const key = filter.id as keyof T;
           if (filter.type === "query") {
             const recordValue = record[key];
-            // Handle array filters (for multi-select)
             if (Array.isArray(filter.value)) {
-              // If record value is an array, check if any item matches the filter values
               if (Array.isArray(recordValue)) {
                 return recordValue.some((item: any) => {
-                  // For simple values (strings, numbers)
                   if (typeof item === "string" || typeof item === "number") {
                     return filter.value!.includes(String(item));
                   }
-                  // For objects, try to find a matching property
                   if (item && typeof item === "object") {
-                    // Check direct id property
                     if ("id" in item && filter.value!.includes(item.id)) {
                       return true;
                     }
-                    // Check nested properties (e.g., bookingAccount.id)
                     for (const prop in item) {
-                      const nestedValue = item[prop];
+                      const propValue = item[prop];
+                      if (typeof propValue === "string" && filter.value!.includes(propValue)) {
+                        return true;
+                      }
                       if (
-                        nestedValue &&
-                        typeof nestedValue === "object" &&
-                        "id" in nestedValue
+                        propValue &&
+                        typeof propValue === "object" &&
+                        "id" in propValue
                       ) {
-                        if (filter.value!.includes(nestedValue.id)) {
+                        if (filter.value!.includes(propValue.id)) {
                           return true;
                         }
                       }
@@ -224,7 +221,6 @@ export function DataTableInner<T extends BaseEntity>({
                   return false;
                 });
               }
-              // If record value is an object with an id, check if the id is in filter values
               if (
                 recordValue &&
                 typeof recordValue === "object" &&
@@ -235,7 +231,6 @@ export function DataTableInner<T extends BaseEntity>({
               return false;
             }
 
-            // Handle string filters
             return (
               typeof recordValue === "string" &&
               recordValue.includes(filter.value)
