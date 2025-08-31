@@ -21,7 +21,7 @@ interface DateFilter {
 interface StringFilter {
   id: string | number;
   type: "query";
-  value?: string;
+  value?: string | string[];
 }
 
 interface BooleanFilter {
@@ -192,8 +192,57 @@ export function DataTableInner<T extends BaseEntity>({
           const key = filter.id as keyof T;
           if (filter.type === "query") {
             const recordValue = record[key];
+            // Handle array filters (for multi-select)
+            if (Array.isArray(filter.value)) {
+              // If record value is an array, check if any item matches the filter values
+              if (Array.isArray(recordValue)) {
+                return recordValue.some((item: any) => {
+                  // For simple values (strings, numbers)
+                  if (typeof item === "string" || typeof item === "number") {
+                    return filter.value!.includes(String(item));
+                  }
+                  // For objects, try to find a matching property
+                  if (item && typeof item === "object") {
+                    // Check direct id property
+                    if ("id" in item && filter.value!.includes(item.id)) {
+                      return true;
+                    }
+                    // Check nested properties (e.g., bookingAccount.id)
+                    for (const prop in item) {
+                      const nestedValue = item[prop];
+                      if (
+                        nestedValue &&
+                        typeof nestedValue === "object" &&
+                        "id" in nestedValue
+                      ) {
+                        if (filter.value!.includes(nestedValue.id)) {
+                          return true;
+                        }
+                      }
+                    }
+                  }
+                  return false;
+                });
+              }
+              // If record value is a string, check if it's in the filter values
+              if (typeof recordValue === "string") {
+                return filter.value.includes(recordValue);
+              }
+              // If record value is an object with an id, check if the id is in filter values
+              if (
+                recordValue &&
+                typeof recordValue === "object" &&
+                "id" in recordValue
+              ) {
+                return filter.value.includes((recordValue as any).id);
+              }
+              return false;
+            }
+
+            // Handle string filters
             return (
               typeof recordValue === "string" &&
+              typeof filter.value === "string" &&
               recordValue.includes(filter.value)
             );
           } else if (filter.type === "date") {
