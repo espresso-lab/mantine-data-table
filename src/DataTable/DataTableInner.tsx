@@ -1,36 +1,16 @@
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  Group,
-  Menu,
-  Modal,
-  Skeleton,
-  Stack,
-  Tabs,
-  Title,
-} from "@mantine/core";
+import { ActionIcon, Alert, Button, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useState } from "react";
 import { CreateModal } from "./CreateModal";
-import {
-  IconCaretDownFilled,
-  IconInfoCircle,
-  IconPencil,
-  IconRefresh,
-  IconTrash,
-} from "@tabler/icons-react";
-import {
-  DataTable as MantineDataTable,
-  DataTableColumn,
-  DataTableSortStatus,
-} from "mantine-datatable";
+import { IconCaretDownFilled, IconInfoCircle, IconPencil, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus } from "mantine-datatable";
 import { sortBy } from "lodash";
-import { DatesRangeValue } from "@mantine/dates";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
 import { usePersistentState } from "../Hooks/usePersitentState.ts";
+
+type DatesRangeValue = [string | null, string | null];
 
 interface DateFilter {
   id: string | number;
@@ -52,7 +32,13 @@ interface BooleanFilter {
 
 type Filter = DateFilter | StringFilter | BooleanFilter;
 
-export type FieldType = "text" | "number" | "boolean" | "custom" | "date" | "textarea";
+export type FieldType =
+  | "text"
+  | "number"
+  | "boolean"
+  | "custom"
+  | "date"
+  | "textarea";
 
 export interface Field<T> {
   id: string;
@@ -146,7 +132,8 @@ export function DataTableInner<T extends BaseEntity>({
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
 
-  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+  const activeTab =
+    controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
 
   const handleTabChange = (value: string | null) => {
     if (controlledActiveTab === undefined) {
@@ -211,12 +198,19 @@ export function DataTableInner<T extends BaseEntity>({
             );
           } else if (filter.type === "date") {
             const dateValue = filter.value as DatesRangeValue;
+            if (!dateValue) return true;
+
             const [from, to] = dateValue;
-            if (from && to) {
-              const recordDate = record[key];
-              if (typeof recordDate === "string") {
-                const date = new Date(recordDate);
-                return date >= from && date <= to;
+            if (!from && !to) return true;
+            const recordDate = record[key];
+            if (typeof recordDate === "string") {
+              const recordDateStr = recordDate.split(" ")[0]; // Extract date part if datetime
+              if (from && to) {
+                return recordDateStr >= from && recordDateStr <= to;
+              } else if (from && !to) {
+                return recordDateStr >= from;
+              } else if (!from && to) {
+                return recordDateStr <= to;
               }
             }
             return true;
