@@ -226,6 +226,7 @@ export function useAddOne<T extends BaseEntity>(
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
+        exact: true, // Only invalidate exact matches, not prefix matches
       });
     },
     onError(error) {
@@ -247,6 +248,7 @@ export function useUpdateOne<T extends BaseEntity>(
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
+        exact: true, // Only invalidate exact matches, not prefix matches
       });
     },
     onError(error) {
@@ -266,6 +268,7 @@ export function useDeleteOne(
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())],
+        exact: true, // Only invalidate exact matches, not prefix matches
       });
     },
     onError(error) {
