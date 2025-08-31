@@ -225,12 +225,10 @@ export function useAddOne<T extends BaseEntity>(
       createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())],
-        exact: true, // Only invalidate exact matches, not prefix matches
+        queryKey: [...queryKey.map((k) => k.toString())]
       });
     },
     onError(error) {
-      // Optionally log or handle globally
       parseApiError(error);
     },
   });
@@ -247,8 +245,7 @@ export function useUpdateOne<T extends BaseEntity>(
       updateOne<T>(`${baseUrl}${apiPath}`, item),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())],
-        exact: true, // Only invalidate exact matches, not prefix matches
+        queryKey: [...queryKey.map((k) => k.toString())]
       });
     },
     onError(error) {
@@ -267,8 +264,7 @@ export function useDeleteOne(
     mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())],
-        exact: true, // Only invalidate exact matches, not prefix matches
+        queryKey: [...queryKey.map((k) => k.toString())]
       });
     },
     onError(error) {
