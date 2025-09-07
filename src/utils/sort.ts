@@ -28,6 +28,11 @@ export const sortData = <T>(
           return new Date(value).getTime(); // Convert to timestamp for correct sorting
         }
 
+        // String comparison - case insensitive
+        if (typeof value === "string") {
+          return value.toLowerCase();
+        }
+
         // Return the value as is for other types
         return value;
       },
