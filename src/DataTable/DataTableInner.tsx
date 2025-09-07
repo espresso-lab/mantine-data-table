@@ -4,11 +4,11 @@ import React, { useEffect, useState } from "react";
 import { CreateModal } from "./CreateModal";
 import { IconCaretDownFilled, IconInfoCircle, IconPencil, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus } from "mantine-datatable";
-import { sortBy } from "lodash";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
 import { usePersistentState } from "../Hooks/usePersitentState.ts";
+import { sortData } from "../utils/sort";
 
 type DatesRangeValue = [string | null, string | null];
 
@@ -204,7 +204,10 @@ export function DataTableInner<T extends BaseEntity>({
                     }
                     for (const prop in item) {
                       const propValue = item[prop];
-                      if (typeof propValue === "string" && filter.value!.includes(propValue)) {
+                      if (
+                        typeof propValue === "string" &&
+                        filter.value!.includes(propValue)
+                      ) {
                         return true;
                       }
                       if (
@@ -267,15 +270,22 @@ export function DataTableInner<T extends BaseEntity>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
     direction: defaultSort?.direction ?? "desc",
   });
+
   const [sortedData, setSortedData] = useState<T[]>(() => {
-    const entries = sortBy(data, defaultSort?.field ?? fields[0].id) as T[];
-    return defaultSort?.direction === "asc" ? entries : entries.reverse();
+    return sortData(
+      data,
+      (defaultSort?.field ?? fields[0].id) as keyof T,
+      defaultSort?.direction ?? "desc",
+    );
   });
 
   useEffect(() => {
-    const entries = sortBy(data, sortStatus.columnAccessor) as T[];
     setSortedData(
-      sortStatus.direction === "desc" ? entries.reverse() : entries,
+      sortData(
+        data,
+        sortStatus.columnAccessor as keyof T,
+        sortStatus.direction,
+      ),
     );
   }, [sortStatus, data]);
 
@@ -322,6 +332,7 @@ export function DataTableInner<T extends BaseEntity>({
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  // @ts-ignore
   return (
     <>
       <Group gap="xs" justify={title ? "space-between" : "end"} align="center">
