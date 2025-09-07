@@ -167,7 +167,6 @@ export function DataTableInner<T extends BaseEntity>({
     refetch,
   } = useGetAll<T>(apiPath + queryString, effectiveQueryKey);
 
-  const [data, setData] = useState<T[]>([]);
   const { queryClient } = useDataTable();
 
   useEffect(() => {
@@ -176,152 +175,120 @@ export function DataTableInner<T extends BaseEntity>({
     connectedQueryKeys?.forEach((connectedQueryKey) =>
       queryClient.invalidateQueries({ queryKey: connectedQueryKey }),
     );
+  }, [allData, connectedQueryKeys, queryClient]);
 
-    if (!filters || filters.length === 0) {
-      setData(allData);
-      return;
-    }
+  // Filter data
+  const filteredData = (() => {
+    if (!allData || !Array.isArray(allData)) return [];
+    if (!filters || filters.length === 0) return allData;
 
-    setData(
-      allData.filter((record: T) =>
-        filters.every((filter) => {
-          if (filter.value === undefined) {
-            return true;
-          }
+    return allData.filter((record: T) =>
+      filters.every((filter) => {
+        if (filter.value === undefined) return true;
 
-          const key = filter.id as keyof T;
-          if (filter.type === "query") {
-            const recordValue = record[key];
-            if (Array.isArray(filter.value)) {
-              if (Array.isArray(recordValue)) {
-                return recordValue.some((item: any) => {
-                  if (typeof item === "string" || typeof item === "number") {
-                    return filter.value!.includes(String(item));
+        const key = filter.id as keyof T;
+        if (filter.type === "query") {
+          const recordValue = record[key];
+          if (Array.isArray(filter.value)) {
+            if (Array.isArray(recordValue)) {
+              return recordValue.some((item: any) => {
+                if (typeof item === "string" || typeof item === "number") {
+                  return filter.value!.includes(String(item));
+                }
+                if (item && typeof item === "object") {
+                  if ("id" in item && filter.value!.includes(item.id)) {
+                    return true;
                   }
-                  if (item && typeof item === "object") {
-                    if ("id" in item && filter.value!.includes(item.id)) {
+                  for (const prop in item) {
+                    const propValue = item[prop];
+                    if (
+                      typeof propValue === "string" &&
+                      filter.value!.includes(propValue)
+                    ) {
                       return true;
                     }
-                    for (const prop in item) {
-                      const propValue = item[prop];
-                      if (
-                        typeof propValue === "string" &&
-                        filter.value!.includes(propValue)
-                      ) {
+                    if (
+                      propValue &&
+                      typeof propValue === "object" &&
+                      "id" in propValue
+                    ) {
+                      if (filter.value!.includes(propValue.id)) {
                         return true;
-                      }
-                      if (
-                        propValue &&
-                        typeof propValue === "object" &&
-                        "id" in propValue
-                      ) {
-                        if (filter.value!.includes(propValue.id)) {
-                          return true;
-                        }
                       }
                     }
                   }
-                  return false;
-                });
-              }
-              if (
-                recordValue &&
-                typeof recordValue === "object" &&
-                "id" in recordValue
-              ) {
-                return filter.value.includes((recordValue as any).id);
-              }
-              return false;
+                }
+                return false;
+              });
             }
-
-            return (
-              typeof recordValue === "string" &&
-              recordValue.includes(filter.value)
-            );
-          } else if (filter.type === "date") {
-            const dateValue = filter.value as DatesRangeValue;
-            if (!dateValue) return true;
-
-            const [from, to] = dateValue;
-            if (!from && !to) return true;
-            const recordDate = record[key];
-            if (typeof recordDate === "string") {
-              const recordDateStr = recordDate.split(" ")[0]; // Extract date part if datetime
-              if (from && to) {
-                return recordDateStr >= from && recordDateStr <= to;
-              } else if (from && !to) {
-                return recordDateStr >= from;
-              } else if (!from && to) {
-                return recordDateStr <= to;
-              }
+            if (
+              recordValue &&
+              typeof recordValue === "object" &&
+              "id" in recordValue
+            ) {
+              return filter.value.includes((recordValue as any).id);
             }
-            return true;
-          } else if (filter.type === "boolean") {
-            const recordValue = record[key];
-            return recordValue === filter.value;
+            return false;
+          }
+          return (
+            typeof recordValue === "string" &&
+            recordValue.includes(filter.value)
+          );
+        } else if (filter.type === "date") {
+          const dateValue = filter.value as DatesRangeValue;
+          if (!dateValue) return true;
+
+          const [from, to] = dateValue;
+          if (!from && !to) return true;
+          const recordDate = record[key];
+          if (typeof recordDate === "string") {
+            const recordDateStr = recordDate.split(" ")[0];
+            if (from && to) {
+              return recordDateStr >= from && recordDateStr <= to;
+            } else if (from && !to) {
+              return recordDateStr >= from;
+            } else if (!from && to) {
+              return recordDateStr <= to;
+            }
           }
           return true;
-        }),
-      ),
+        } else if (filter.type === "boolean") {
+          const recordValue = record[key];
+          return recordValue === filter.value;
+        }
+        return true;
+      }),
     );
-  }, [allData, filters, allQueryParams]);
+  })();
 
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
     direction: defaultSort?.direction ?? "desc",
   });
 
-  const [sortedData, setSortedData] = useState<T[]>(() => {
-    return sortData(
-      data,
-      (defaultSort?.field ?? fields[0].id) as keyof T,
-      defaultSort?.direction ?? "desc",
-    );
-  });
+  // Sort data
+  const sortedData = sortData(
+    filteredData,
+    sortStatus.columnAccessor as keyof T,
+    sortStatus.direction,
+  );
 
-  useEffect(() => {
-    setSortedData(
-      sortData(
-        data,
-        sortStatus.columnAccessor as keyof T,
-        sortStatus.direction,
-      ),
-    );
-  }, [sortStatus, data]);
-
-  // handle pagination
+  // Handle pagination
   const [pageSize, setPageSize] = usePersistentState(
     PAGE_SIZES[1],
     "mantine-table-page-size",
   );
   const [page, setPage] = useState(1);
-  const [records, setRecords] = useState<T[]>(
-    pagination ? sortedData.slice(0, pageSize) : sortedData,
-  );
 
-  useEffect(() => {
-    setPage(1);
-  }, [pageSize]);
-
-  useEffect(() => {
-    if (pagination) {
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize;
-      setRecords(sortedData.slice(from, to));
-    } else {
-      setRecords(sortedData);
-    }
-  }, [page, sortedData, pagination, pageSize]);
+  // Get paginated records
+  const records = (() => {
+    if (!pagination) return sortedData;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize;
+    return sortedData.slice(from, to);
+  })();
 
   const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
-  useEffect(() => {
-    if (!selection) return;
-    setSelectedRecords(
-      sortedData.filter((record) =>
-        selectedRecords.some((selected) => selected.id === record.id),
-      ),
-    );
-  }, [sortedData]);
 
   // Reset selection when tab changes
   useEffect(() => {
@@ -332,7 +299,6 @@ export function DataTableInner<T extends BaseEntity>({
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  // @ts-ignore
   return (
     <>
       <Group gap="xs" justify={title ? "space-between" : "end"} align="center">
