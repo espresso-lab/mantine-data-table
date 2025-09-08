@@ -1,5 +1,3 @@
-import _ from "lodash";
-
 // Helper function to detect the primary data type of a column
 const detectColumnType = <T>(
   data: T[],
@@ -94,58 +92,93 @@ export const sortData = <T>(
     typeCache.set(cacheKey, columnType);
   }
 
-  return _.orderBy(
-    data,
-    [
-      (item) => {
-        const value = item[field];
+  // Create a custom sort function that handles null values properly
+  const sortedData = [...data].sort((a, b) => {
+    const aValue = a[field];
+    const bValue = b[field];
 
-        // Handle null, undefined or empty strings - always first for ascending
-        if (value === null || value === undefined || value === "") {
-          return direction === "asc" ? -Infinity : Infinity;
+    // Handle null/undefined/empty values
+    const aIsNull = aValue === null || aValue === undefined || aValue === "";
+    const bIsNull = bValue === null || bValue === undefined || bValue === "";
+
+    // If both are null, they're equal
+    if (aIsNull && bIsNull) return 0;
+    
+    // If only a is null, it should come first for asc, last for desc
+    if (aIsNull) return direction === "asc" ? -1 : 1;
+    
+    // If only b is null, it should come first for asc, last for desc
+    if (bIsNull) return direction === "asc" ? 1 : -1;
+
+    // Both values are not null, proceed with normal sorting
+    let aSortValue: any;
+    let bSortValue: any;
+
+    switch (columnType) {
+      case "date":
+        if (typeof aValue === "string") {
+          const aDateValue = new Date(aValue.trim());
+          aSortValue = isNaN(aDateValue.getTime()) ? null : aDateValue.getTime();
+        } else if (aValue instanceof Date) {
+          aSortValue = aValue.getTime();
+        } else {
+          aSortValue = null;
         }
 
-        switch (columnType) {
-          case "date":
-            if (typeof value === "string") {
-              const dateValue = new Date(value.trim());
-              return isNaN(dateValue.getTime())
-                ? direction === "asc"
-                  ? -Infinity
-                  : Infinity
-                : dateValue.getTime();
-            }
-            if (value instanceof Date) {
-              return value.getTime();
-            }
-            return direction === "asc" ? -Infinity : Infinity;
-
-          case "number":
-            if (typeof value === "number") {
-              return value;
-            }
-            const strValue = String(value).trim();
-            const numValue = parseFloat(strValue);
-            return isNaN(numValue)
-              ? direction === "asc"
-                ? -Infinity
-                : Infinity
-              : numValue;
-
-          case "string":
-            // String comparison - case insensitive, with locale support
-            const stringValue =
-              typeof value === "string" ? value : String(value);
-            return stringValue.toLowerCase().trim();
-
-          case "mixed":
-          default:
-            // For mixed types, convert everything to string for consistent sorting
-            const mixedValue = String(value);
-            return mixedValue.toLowerCase().trim();
+        if (typeof bValue === "string") {
+          const bDateValue = new Date(bValue.trim());
+          bSortValue = isNaN(bDateValue.getTime()) ? null : bDateValue.getTime();
+        } else if (bValue instanceof Date) {
+          bSortValue = bValue.getTime();
+        } else {
+          bSortValue = null;
         }
-      },
-    ],
-    [direction],
-  );
+        break;
+
+      case "number":
+        if (typeof aValue === "number") {
+          aSortValue = aValue;
+        } else {
+          const aStrValue = String(aValue).trim();
+          const aNumValue = parseFloat(aStrValue);
+          aSortValue = isNaN(aNumValue) ? null : aNumValue;
+        }
+
+        if (typeof bValue === "number") {
+          bSortValue = bValue;
+        } else {
+          const bStrValue = String(bValue).trim();
+          const bNumValue = parseFloat(bStrValue);
+          bSortValue = isNaN(bNumValue) ? null : bNumValue;
+        }
+        break;
+
+      case "string":
+        const aStringValue = typeof aValue === "string" ? aValue : String(aValue);
+        const bStringValue = typeof bValue === "string" ? bValue : String(bValue);
+        aSortValue = aStringValue.toLowerCase().trim();
+        bSortValue = bStringValue.toLowerCase().trim();
+        break;
+
+      case "mixed":
+      default:
+        const aMixedValue = String(aValue);
+        const bMixedValue = String(bValue);
+        aSortValue = aMixedValue.toLowerCase().trim();
+        bSortValue = bMixedValue.toLowerCase().trim();
+        break;
+    }
+
+    // Handle null sort values (invalid dates, non-numeric strings, etc.)
+    if (aSortValue === null && bSortValue === null) return 0;
+    if (aSortValue === null) return direction === "asc" ? -1 : 1;
+    if (bSortValue === null) return direction === "asc" ? 1 : -1;
+
+    // Compare the sort values
+    if (aSortValue < bSortValue) return direction === "asc" ? -1 : 1;
+    if (aSortValue > bSortValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  return sortedData;
 };

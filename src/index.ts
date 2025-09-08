@@ -32,3 +32,4 @@ export type { DeleteModalProps } from "./DataTable/DeleteModal.tsx";
 export { usePersistentState } from "./Hooks/usePersitentState.ts";
 export { useDataTable } from "./Hooks/useDataTable.ts";
 export { DataTableProvider } from "./Context/DataTableContext.tsx";
+export { sortData } from "./utils/sort.ts";
