@@ -206,11 +206,13 @@ export function useGetOne<T extends BaseEntity>(
 export function useGetAll<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
+  enabled: boolean = true,
 ) {
   const { baseUrl } = useDataTable();
   return useQuery<T[]>({
     queryKey: [...queryKey.map((k) => k.toString())],
     queryFn: () => getAll<T>(`${baseUrl}${apiPath}`),
+    enabled
   });
 }
 
