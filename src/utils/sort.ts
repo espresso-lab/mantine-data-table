@@ -171,8 +171,8 @@ export const sortData = <T>(
 
     // Handle null sort values (invalid dates, non-numeric strings, etc.)
     if (aSortValue === null && bSortValue === null) return 0;
-    if (aSortValue === null) return direction === "asc" ? -1 : 1;
-    if (bSortValue === null) return direction === "asc" ? 1 : -1;
+    if (aSortValue === null) return direction === "asc" ? 1 : -1;
+    if (bSortValue === null) return direction === "asc" ? -1 : 1;
 
     // Compare the sort values
     if (aSortValue < bSortValue) return direction === "asc" ? -1 : 1;
