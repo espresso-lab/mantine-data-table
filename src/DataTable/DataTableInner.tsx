@@ -107,6 +107,10 @@ export interface DataTableProps<T extends BaseEntity> {
   rowExpansion?: {
     allowMultiple?: boolean;
     content: (record: T) => React.ReactNode;
+    expanded?: {
+      recordIds: string[];
+      onRecordIdsChange: (recordIds: string[]) => void;
+    };
   };
 }
 
@@ -436,6 +440,9 @@ export function DataTableInner<T extends BaseEntity>({
             rowExpansion: {
               allowMultiple: rowExpansion.allowMultiple ?? false,
               content: ({ record }: { record: T }) => rowExpansion.content(record),
+              ...(rowExpansion.expanded && {
+                expanded: rowExpansion.expanded,
+              }),
             },
           })}
           columns={fields.map((field) => field.column)}
