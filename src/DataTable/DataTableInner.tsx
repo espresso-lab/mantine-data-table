@@ -104,6 +104,10 @@ export interface DataTableProps<T extends BaseEntity> {
   defaultTab?: string;
   activeTab?: string | null;
   onActiveTabChange?: (tabValue: string | null) => void;
+  rowExpansion?: {
+    allowMultiple?: boolean;
+    content: (record: T) => React.ReactNode;
+  };
 }
 
 const PAGE_SIZES = [10, 15, 20, 50, 100, 500];
@@ -127,6 +131,7 @@ export function DataTableInner<T extends BaseEntity>({
   defaultTab,
   activeTab: controlledActiveTab,
   onActiveTabChange,
+  rowExpansion,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
@@ -427,6 +432,12 @@ export function DataTableInner<T extends BaseEntity>({
               onRecordsPerPageChange: setPageSize,
               recordsPerPageLabel: "Einträge pro Seite",
             })}
+          {...(rowExpansion && {
+            rowExpansion: {
+              allowMultiple: rowExpansion.allowMultiple ?? false,
+              content: ({ record }: { record: T }) => rowExpansion.content(record),
+            },
+          })}
           columns={fields.map((field) => field.column)}
           noRecordsText="Keine Einträge gefunden"
         />
