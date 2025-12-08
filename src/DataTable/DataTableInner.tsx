@@ -104,6 +104,8 @@ export interface DataTableProps<T extends BaseEntity> {
   defaultTab?: string;
   activeTab?: string | null;
   onActiveTabChange?: (tabValue: string | null) => void;
+  canUpdate?: (record: T) => boolean;
+  canDelete?: (record: T) => boolean;
   rowExpansion?: {
     allowMultiple?: boolean;
     content: (record: T) => React.ReactNode;
@@ -135,6 +137,8 @@ export function DataTableInner<T extends BaseEntity>({
   defaultTab,
   activeTab: controlledActiveTab,
   onActiveTabChange,
+  canUpdate,
+  canDelete,
   rowExpansion,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
@@ -329,15 +333,16 @@ export function DataTableInner<T extends BaseEntity>({
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
-                {fields.find((field) => field.update) && (
-                  <Menu.Item
-                    leftSection={<IconPencil size={14} />}
-                    onClick={() => setUpdateModalOpen(true)}
-                    disabled={selectedRecords.length !== 1}
-                  >
-                    Bearbeiten
-                  </Menu.Item>
-                )}
+                {fields.find((field) => field.update) &&
+                  (!canUpdate || canUpdate(selectedRecords[0])) && (
+                    <Menu.Item
+                      leftSection={<IconPencil size={14} />}
+                      onClick={() => setUpdateModalOpen(true)}
+                      disabled={selectedRecords.length !== 1}
+                    >
+                      Bearbeiten
+                    </Menu.Item>
+                  )}
                 {(actions ?? []).map((action, index) => (
                   <Menu.Item
                     {...(action.icon && { leftSection: action.icon })}
@@ -347,15 +352,16 @@ export function DataTableInner<T extends BaseEntity>({
                     {action.label}
                   </Menu.Item>
                 ))}
-                {fields.find((field) => field.delete) && (
-                  <Menu.Item
-                    leftSection={<IconTrash size={14} />}
-                    onClick={() => setDeleteModalOpen(true)}
-                    color="red"
-                  >
-                    Löschen
-                  </Menu.Item>
-                )}
+                {fields.find((field) => field.delete) &&
+                  (!canDelete || canDelete(selectedRecords[0])) && (
+                    <Menu.Item
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => setDeleteModalOpen(true)}
+                      color="red"
+                    >
+                      Löschen
+                    </Menu.Item>
+                  )}
               </Menu.Dropdown>
             </Menu>
           )}
