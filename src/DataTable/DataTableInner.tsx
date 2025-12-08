@@ -334,7 +334,7 @@ export function DataTableInner<T extends BaseEntity>({
               </Menu.Target>
               <Menu.Dropdown>
                 {fields.find((field) => field.update) &&
-                  (!canUpdate || canUpdate(selectedRecords[0])) && (
+                  (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0]))) && (
                     <Menu.Item
                       leftSection={<IconPencil size={14} />}
                       onClick={() => setUpdateModalOpen(true)}
@@ -353,7 +353,7 @@ export function DataTableInner<T extends BaseEntity>({
                   </Menu.Item>
                 ))}
                 {fields.find((field) => field.delete) &&
-                  (!canDelete || canDelete(selectedRecords[0])) && (
+                  (!canDelete || (selectedRecords.length > 0 && canDelete(selectedRecords[0]))) && (
                     <Menu.Item
                       leftSection={<IconTrash size={14} />}
                       onClick={() => setDeleteModalOpen(true)}
