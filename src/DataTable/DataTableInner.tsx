@@ -321,20 +321,27 @@ export function DataTableInner<T extends BaseEntity>({
           >
             <IconRefresh />
           </ActionIcon>
-          {(fields.some((field) => field.update) || selection) && (
-            <Menu shadow="md">
-              <Menu.Target>
-                <Button
-                  variant="outline"
-                  rightSection={<IconCaretDownFilled size={14} />}
-                  disabled={!selectedRecords.length}
-                >
-                  Aktionen
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                {fields.find((field) => field.update) &&
-                  (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0]))) && (
+          {(fields.some((field) => field.update) || selection) && (() => {
+            const hasUpdateAction = fields.find((field) => field.update) && 
+              (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0])));
+            const hasDeleteAction = fields.find((field) => field.delete) && 
+              (!canDelete || (selectedRecords.length > 0 && canDelete(selectedRecords[0])));
+            const hasCustomActions = (actions ?? []).length > 0;
+            const hasAnyAction = hasUpdateAction || hasDeleteAction || hasCustomActions;
+
+            return (
+              <Menu shadow="md">
+                <Menu.Target>
+                  <Button
+                    variant="outline"
+                    rightSection={<IconCaretDownFilled size={14} />}
+                    disabled={!selectedRecords.length || !hasAnyAction}
+                  >
+                    Aktionen
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {hasUpdateAction && (
                     <Menu.Item
                       leftSection={<IconPencil size={14} />}
                       onClick={() => setUpdateModalOpen(true)}
@@ -343,17 +350,16 @@ export function DataTableInner<T extends BaseEntity>({
                       Bearbeiten
                     </Menu.Item>
                   )}
-                {(actions ?? []).map((action, index) => (
-                  <Menu.Item
-                    {...(action.icon && { leftSection: action.icon })}
-                    key={`custom_action_${index}`}
-                    onClick={() => action.onClick(selectedRecords)}
-                  >
-                    {action.label}
-                  </Menu.Item>
-                ))}
-                {fields.find((field) => field.delete) &&
-                  (!canDelete || (selectedRecords.length > 0 && canDelete(selectedRecords[0]))) && (
+                  {(actions ?? []).map((action, index) => (
+                    <Menu.Item
+                      {...(action.icon && { leftSection: action.icon })}
+                      key={`custom_action_${index}`}
+                      onClick={() => action.onClick(selectedRecords)}
+                    >
+                      {action.label}
+                    </Menu.Item>
+                  ))}
+                  {hasDeleteAction && (
                     <Menu.Item
                       leftSection={<IconTrash size={14} />}
                       onClick={() => setDeleteModalOpen(true)}
@@ -362,9 +368,10 @@ export function DataTableInner<T extends BaseEntity>({
                       Löschen
                     </Menu.Item>
                   )}
-              </Menu.Dropdown>
-            </Menu>
-          )}
+                </Menu.Dropdown>
+              </Menu>
+            );
+          })()}
           {fields.find((field) => field.create) && (
             <Button
               onClick={() => setCreateModalOpen(true)}
