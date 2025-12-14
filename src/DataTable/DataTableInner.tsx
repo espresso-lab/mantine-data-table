@@ -100,6 +100,7 @@ export interface DataTableProps<T extends BaseEntity> {
     field: string;
     direction: "asc" | "desc";
   };
+  onSortChange?: (field: string, direction: "asc" | "desc") => void;
   tabs?: TabOption[];
   defaultTab?: string;
   activeTab?: string | null;
@@ -131,6 +132,7 @@ export function DataTableInner<T extends BaseEntity>({
   actions,
   steps,
   defaultSort,
+  onSortChange,
   createButtonText,
   queryParams,
   tabs,
@@ -276,6 +278,13 @@ export function DataTableInner<T extends BaseEntity>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
     direction: defaultSort?.direction ?? "desc",
   });
+  
+  const handleSortChange = (newSortStatus: DataTableSortStatus<T>) => {
+    setSortStatus(newSortStatus);
+    if (onSortChange) {
+      onSortChange(String(newSortStatus.columnAccessor), newSortStatus.direction);
+    }
+  };
 
   // Sort data
   const sortedData = sortData(
@@ -434,7 +443,7 @@ export function DataTableInner<T extends BaseEntity>({
           fetching={isError}
           records={records}
           sortStatus={sortStatus}
-          onSortStatusChange={setSortStatus}
+          onSortStatusChange={handleSortChange}
           {...(selection && {
             selectedRecords,
             onSelectedRecordsChange: setSelectedRecords,
