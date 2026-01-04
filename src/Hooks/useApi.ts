@@ -29,18 +29,22 @@ async function handleHttpError(resp: Response): Promise<never> {
     throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
   }
   
+  // Try to parse as JSON
+  let errorJson: { message?: string; error?: string; details?: string } | null = null;
   try {
-    // Try to parse as JSON
-    const errorJson = JSON.parse(responseText);
-    if (errorJson.message) {
-      throw new Error(errorJson.message);
-    } else if (errorJson.error) {
-      throw new Error(errorJson.error);
-    } else {
-      throw new Error(responseText);
-    }
+    errorJson = JSON.parse(responseText);
   } catch {
     // Not valid JSON, use the raw text
+    throw new Error(responseText);
+  }
+  
+  // Extract the message from the parsed JSON
+  if (errorJson?.message) {
+    throw new Error(errorJson.message);
+  } else if (errorJson?.error) {
+    throw new Error(errorJson.error);
+  } else {
+    // JSON was parsed but no message/error field found
     throw new Error(responseText);
   }
 }
