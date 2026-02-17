@@ -107,6 +107,7 @@ export interface DataTableProps<T extends BaseEntity> {
   onActiveTabChange?: (tabValue: string | null) => void;
   canUpdate?: (record: T) => boolean;
   canDelete?: (record: T) => boolean;
+  showRefresh?: boolean;
   rowExpansion?: {
     allowMultiple?: boolean;
     content: (record: T) => React.ReactNode;
@@ -117,7 +118,7 @@ export interface DataTableProps<T extends BaseEntity> {
   };
 }
 
-const PAGE_SIZES = [10, 15, 20, 50, 100, 500];
+const PAGE_SIZES = [10, 15, 50, 100, 500];
 
 export function DataTableInner<T extends BaseEntity>({
   title,
@@ -141,6 +142,7 @@ export function DataTableInner<T extends BaseEntity>({
   onActiveTabChange,
   canUpdate,
   canDelete,
+  showRefresh = true,
   rowExpansion,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
@@ -323,13 +325,15 @@ export function DataTableInner<T extends BaseEntity>({
             title
           ))}
         <Group align="center" gap="xs">
-          <ActionIcon
-            variant="subtle"
-            onClick={() => refetch()}
-            aria-label="Neuladen"
-          >
-            <IconRefresh />
-          </ActionIcon>
+          {showRefresh && (
+            <ActionIcon
+              variant="subtle"
+              onClick={() => refetch()}
+              aria-label="Neuladen"
+            >
+              <IconRefresh />
+            </ActionIcon>
+          )}
           {(fields.some((field) => field.update) || selection) && (() => {
             const hasUpdateAction = fields.find((field) => field.update) && 
               (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0])));
