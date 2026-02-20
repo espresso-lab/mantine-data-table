@@ -144,7 +144,7 @@ export async function createOne<C, T extends BaseEntity>(
 }
 
 export async function api<R, U>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   path: string,
   payload?: U,
 ): Promise<R> {
