@@ -87,6 +87,7 @@ export interface DataTableProps<T extends BaseEntity> {
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
+  mutationApiPath?: string;
   queryParams?: Record<string, string | number | boolean | null>;
   filters?: Filter[];
   buttons?: React.ReactNode[];
@@ -126,6 +127,7 @@ export function DataTableInner<T extends BaseEntity>({
   queryKey,
   connectedQueryKeys,
   apiPath,
+  mutationApiPath,
   buttons,
   fields,
   selection,
@@ -493,7 +495,7 @@ export function DataTableInner<T extends BaseEntity>({
           <UpdateModal<T>
             fields={fields.filter((field) => field.update)}
             queryKey={queryKey}
-            apiPath={apiPath}
+            apiPath={mutationApiPath ?? apiPath}
             id={selectedRecords[0].id}
             onClose={() => {
               setUpdateModalOpen(false);
@@ -519,7 +521,7 @@ export function DataTableInner<T extends BaseEntity>({
               setSelectedRecords([]);
             }}
             queryKey={queryKey}
-            apiPath={apiPath}
+            apiPath={mutationApiPath ?? apiPath}
             selectedRecords={selectedRecords}
           />
         </Modal>
@@ -534,7 +536,7 @@ export function DataTableInner<T extends BaseEntity>({
       >
         <CreateModal<T>
           queryKey={queryKey}
-          apiPath={apiPath}
+          apiPath={mutationApiPath ?? apiPath}
           onClose={() => {
             setCreateModalOpen(false);
           }}
