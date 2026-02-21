@@ -63,11 +63,11 @@ function renderFieldValue<T extends BaseEntity>(record: T, field: Field<T>): Rea
 
 function MobileCardRow<T extends BaseEntity>({ field, record }: { field: Field<T>; record: T }) {
   return (
-    <Group wrap="nowrap" justify="space-between" py="xs" px="sm">
+    <Group wrap="nowrap" justify="space-between" align="center" py="xs" px="sm">
       <Text fw={700} fz="sm">
         {(field.column.title as string) ?? field.id}
       </Text>
-      <Box ta="right">
+      <Box ta="right" fz="sm">
         {renderFieldValue(record, field)}
       </Box>
     </Group>
@@ -157,10 +157,11 @@ export function MobileCardList<T extends BaseEntity>({
         const selected = isSelected(record);
         const clickable = !!onRowClick || !!selection;
 
-        const expanded = expandedIds.has(record.id);
+        const recordKey = record.id ?? index;
+        const expanded = expandedIds.has(recordKey);
 
         return (
-          <React.Fragment key={record.id}>
+          <React.Fragment key={recordKey}>
             <Box
               bg={selected ? "var(--mantine-primary-color-light)" : index % 2 === 0 ? "var(--mantine-color-gray-0)" : "white"}
               bd={!selected ? "1px solid var(--mantine-color-gray-2)" : undefined}
@@ -174,7 +175,7 @@ export function MobileCardList<T extends BaseEntity>({
                 style={{ cursor: clickable || rowExpansion ? "pointer" : "default" }}
                 onClick={(e: React.MouseEvent) => {
                   if (rowExpansion && !onRowClick) {
-                    toggleExpansion(record.id);
+                    toggleExpansion(recordKey);
                   } else {
                     handleCardClick(record, index, e);
                   }
@@ -193,7 +194,7 @@ export function MobileCardList<T extends BaseEntity>({
                       <Box
                         c="dimmed"
                         style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleExpansion(record.id); }}
+                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleExpansion(recordKey); }}
                       >
                         <IconChevronDown
                           size={16}
