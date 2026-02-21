@@ -28,6 +28,7 @@ export { UpdateModal } from "./DataTable/UpdateModal.tsx";
 export type { UpdateModalProps } from "./DataTable/UpdateModal.tsx";
 export { DeleteModal } from "./DataTable/DeleteModal.tsx";
 export type { DeleteModalProps } from "./DataTable/DeleteModal.tsx";
+export { MobileCardList } from "./DataTable/MobileCardList.tsx";
 
 export { usePersistentState } from "./Hooks/usePersitentState.ts";
 export { useDataTable } from "./Hooks/useDataTable.ts";
