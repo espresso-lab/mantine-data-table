@@ -116,6 +116,7 @@ export interface DataTableProps<T extends BaseEntity> {
       onRecordIdsChange: (recordIds: string[]) => void;
     };
   };
+  onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
 }
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
@@ -144,6 +145,7 @@ export function DataTableInner<T extends BaseEntity>({
   canDelete,
   showRefresh = true,
   rowExpansion,
+  onRowClick,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
@@ -473,6 +475,8 @@ export function DataTableInner<T extends BaseEntity>({
           })}
           columns={fields.map((field) => field.column)}
           noRecordsText="Keine Einträge gefunden"
+          onRowClick={onRowClick}
+          {...(onRowClick && { style: { cursor: "pointer" } })}
         />
       )}
 
