@@ -99,10 +99,13 @@ export function MobileCardList<T extends BaseEntity>({
 
   const sortOptions = listFields
     .filter((f) => f.column.sortable !== false)
-    .map((f) => ({
-      value: (f.column.accessor ?? f.id) as string,
-      label: (f.column.title as string) ?? f.id,
-    }));
+    .reduce<{ value: string; label: string }[]>((acc, f) => {
+      const value = (f.column.accessor ?? f.id) as string;
+      if (!acc.some((o) => o.value === value)) {
+        acc.push({ value, label: (f.column.title as string) ?? f.id });
+      }
+      return acc;
+    }, []);
 
   const isSelected = (record: T) =>
     selectedRecords.some((r) => r.id === record.id);
