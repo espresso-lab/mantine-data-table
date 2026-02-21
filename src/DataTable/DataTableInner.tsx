@@ -43,7 +43,7 @@ export type FieldType =
 export interface Field<T> {
   id: string;
   defaultValue?: T[keyof T];
-  required?: boolean;
+  required?: boolean | ((values: Partial<T>) => boolean);
   step?: number;
   list: boolean;
   create: boolean;
