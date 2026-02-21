@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Button, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
+import { ActionIcon, Alert, Box, Button, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useState } from "react";
 import { CreateModal } from "./CreateModal";
@@ -9,6 +9,7 @@ import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
 import { usePersistentState } from "../Hooks/usePersitentState.ts";
 import { sortData } from "../utils/sort";
+import { MobileCardList } from "./MobileCardList";
 
 type DatesRangeValue = [string | null, string | null];
 
@@ -118,6 +119,7 @@ export interface DataTableProps<T extends BaseEntity> {
     };
   };
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
+  mobileCards?: boolean;
 }
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
@@ -148,6 +150,7 @@ export function DataTableInner<T extends BaseEntity>({
   showRefresh = true,
   rowExpansion,
   onRowClick,
+  mobileCards = false,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
@@ -442,45 +445,82 @@ export function DataTableInner<T extends BaseEntity>({
       )}
 
       {!isLoading && !isRefetching && (
-        /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
-        /* @ts-expect-error */
-        <MantineDataTable
-          my="md"
-          striped
-          highlightOnHover
-          minHeight={150}
-          fetching={isError}
-          records={records}
-          sortStatus={sortStatus}
-          onSortStatusChange={handleSortChange}
-          {...(selection && {
-            selectedRecords,
-            onSelectedRecordsChange: setSelectedRecords,
-          })}
-          {...(pagination &&
-            records.length && {
-              totalRecords: sortedData.length,
-              recordsPerPage: pageSize,
-              onPageChange: setPage,
-              page,
-              recordsPerPageOptions: PAGE_SIZES,
-              onRecordsPerPageChange: setPageSize,
-              recordsPerPageLabel: "Einträge pro Seite",
-            })}
-          {...(rowExpansion && {
-            rowExpansion: {
-              allowMultiple: rowExpansion.allowMultiple ?? false,
-              content: ({ record }: { record: T }) => rowExpansion.content(record),
-              ...(rowExpansion.expanded && {
-                expanded: rowExpansion.expanded,
-              }),
-            },
-          })}
-          columns={fields.map((field) => field.column)}
-          noRecordsText="Keine Einträge gefunden"
-          onRowClick={onRowClick}
-          {...(onRowClick && { style: { cursor: "pointer" } })}
-        />
+        <>
+          <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
+            {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+            {/* @ts-expect-error */}
+            <MantineDataTable
+              my="md"
+              striped
+              highlightOnHover
+              minHeight={150}
+              fetching={isError}
+              records={records}
+              sortStatus={sortStatus}
+              onSortStatusChange={handleSortChange}
+              {...(selection && {
+                selectedRecords,
+                onSelectedRecordsChange: setSelectedRecords,
+              })}
+              {...(pagination &&
+                records.length && {
+                  totalRecords: sortedData.length,
+                  recordsPerPage: pageSize,
+                  onPageChange: setPage,
+                  page,
+                  recordsPerPageOptions: PAGE_SIZES,
+                  onRecordsPerPageChange: setPageSize,
+                  recordsPerPageLabel: "Einträge pro Seite",
+                })}
+              {...(rowExpansion && {
+                rowExpansion: {
+                  allowMultiple: rowExpansion.allowMultiple ?? false,
+                  content: ({ record }: { record: T }) => rowExpansion.content(record),
+                  ...(rowExpansion.expanded && {
+                    expanded: rowExpansion.expanded,
+                  }),
+                },
+              })}
+              columns={fields.map((field) => field.column)}
+              noRecordsText="Keine Einträge gefunden"
+              onRowClick={onRowClick}
+              {...(onRowClick && { style: { cursor: "pointer" } })}
+            />
+          </Box>
+
+          {mobileCards && (
+            <Box hiddenFrom="sm">
+              <MobileCardList
+                records={records}
+                fields={fields}
+                selection={selection}
+                selectedRecords={selectedRecords}
+                onSelectedRecordsChange={setSelectedRecords}
+                onRowClick={onRowClick}
+                sort={{
+                  field: String(sortStatus.columnAccessor),
+                  direction: sortStatus.direction,
+                  onSortChange: (field, direction) => {
+                    handleSortChange({ columnAccessor: field as keyof T, direction });
+                  },
+                }}
+                {...(pagination && records.length && {
+                  pagination: {
+                    totalRecords: sortedData.length,
+                    recordsPerPage: pageSize,
+                    page,
+                    onPageChange: setPage,
+                    recordsPerPageOptions: PAGE_SIZES,
+                    onRecordsPerPageChange: (size: number) => { setPageSize(size); setPage(1); },
+                  },
+                })}
+                {...(rowExpansion && {
+                  rowExpansion: { content: rowExpansion.content },
+                })}
+              />
+            </Box>
+          )}
+        </>
       )}
 
       <Modal
