@@ -445,6 +445,7 @@ export function DataTableInner<T extends BaseEntity>({
         <MantineDataTable
           my="md"
           striped
+          highlightOnHover
           minHeight={150}
           fetching={isError}
           records={records}
