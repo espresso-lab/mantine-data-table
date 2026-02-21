@@ -1,4 +1,4 @@
-import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Pagination, Select, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Pagination, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
 import { Field } from "./DataTableInner";
 import React, { useState } from "react";
@@ -163,23 +163,22 @@ export function MobileCardList<T extends BaseEntity>({
           <React.Fragment key={record.id}>
             <Box
               bg={selected ? "var(--mantine-primary-color-light)" : index % 2 === 0 ? "var(--mantine-color-gray-0)" : "white"}
-              bd={index % 2 === 1 && !selected ? "1px solid var(--mantine-color-gray-2)" : undefined}
+              bd={!selected ? "1px solid var(--mantine-color-gray-2)" : undefined}
               style={{
                 borderRadius: "var(--mantine-radius-md)",
                 overflow: "hidden",
               }}
             >
-              <UnstyledButton
+              <Box
                 w="100%"
                 style={{ cursor: clickable || rowExpansion ? "pointer" : "default" }}
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent) => {
                   if (rowExpansion && !onRowClick) {
                     toggleExpansion(record.id);
                   } else {
                     handleCardClick(record, index, e);
                   }
                 }}
-                component={clickable || rowExpansion ? undefined : "div"}
               >
                 {(selection || rowExpansion) && (
                   <Group px="sm" pt="sm" justify="space-between">
@@ -210,7 +209,7 @@ export function MobileCardList<T extends BaseEntity>({
                     <MobileCardRow field={field} record={record} />
                   </React.Fragment>
                 ))}
-              </UnstyledButton>
+              </Box>
               {rowExpansion && (
                 <Collapse in={expanded}>
                   <Divider />
