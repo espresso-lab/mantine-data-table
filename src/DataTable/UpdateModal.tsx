@@ -76,6 +76,10 @@ export function UpdateModal<T extends BaseEntity>({
             if (field.conditional && !field.conditional(values)) {
               return null;
             }
+            const isReq = typeof field.required === "function"
+              ? field.required(values)
+              : !!field.required;
+            if (!isReq) return null;
             return value ? null : "Pflichtfeld";
           };
           return acc;
@@ -108,11 +112,19 @@ export function UpdateModal<T extends BaseEntity>({
 
 
   
+  function resolveRequired(field: Field<T>, values?: Partial<T>): boolean {
+    if (typeof field.required === "function") {
+      return field.required(values ?? ({} as Partial<T>));
+    }
+    return !!field.required;
+  }
+
   function renderField(field: Field<T>) {
     const formValues = form.getValues();
     if (field.conditional && !field.conditional(formValues)) {
       return null;
     }
+    const isRequired = resolveRequired(field, formValues);
     return (
       <Fragment key={field.id}>
         {(field.type === undefined || field.type == "text") && (
@@ -122,7 +134,7 @@ export function UpdateModal<T extends BaseEntity>({
             placeholder={field.placeholder ?? ""}
             {...form.getInputProps(field.id as string)}
             type={field.id.includes("email") ? "email" : undefined}
-            required={field.required}
+            required={isRequired}
           />
         )}
 
@@ -133,7 +145,7 @@ export function UpdateModal<T extends BaseEntity>({
             placeholder={field.placeholder ?? ""}
             key={form.key(field.id)}
             {...form.getInputProps(field.id as string)}
-            required={field.required}
+            required={isRequired}
           />
         )}
 
@@ -145,7 +157,7 @@ export function UpdateModal<T extends BaseEntity>({
             valueFormat={"DD.MM.YYYY"}
             clearable
             {...form.getInputProps(field.id as string)}
-            required={field.required}
+            required={isRequired}
           />
         )}
 
@@ -155,7 +167,7 @@ export function UpdateModal<T extends BaseEntity>({
             label={field.column.title}
             key={form.key(field.id)}
             {...form.getInputProps(field.id as string, { type: "checkbox" })}
-            required={field.required}
+            required={isRequired}
           />
         )}
 
@@ -167,7 +179,7 @@ export function UpdateModal<T extends BaseEntity>({
             {...form.getInputProps(field.id as string)}
             minRows={3}
             autosize
-            required={field.required}
+            required={isRequired}
           />
         )}
 
@@ -179,7 +191,7 @@ export function UpdateModal<T extends BaseEntity>({
             setHideButtons,
             {
               error: form.getInputProps(field.id as string).error,
-              required: field.required,
+              required: isRequired,
             },
           )}
       </Fragment>
