@@ -324,14 +324,14 @@ export function DataTableInner<T extends BaseEntity>({
 
   return (
     <>
-      <Group gap="xs" justify={title ? "space-between" : "end"} align="center">
+      <Group gap="xs" justify={title ? "space-between" : "end"} align="center" wrap="wrap">
         {title &&
           (typeof title === "string" ? (
             <Title order={4}>{title}</Title>
           ) : (
             title
           ))}
-        <Group align="center" gap="xs">
+        <Group align="center" gap="xs" wrap="wrap" justify="end" style={{ marginLeft: "auto" }}>
           {showRefresh && (
             <ActionIcon
               variant="subtle"
