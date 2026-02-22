@@ -51,6 +51,12 @@ export default function App() {
   const [enableRowExpansion, setEnableRowExpansion] = useState(false);
   const [enableCardActions, setEnableCardActions] = useState(true);
 
+  const demoActions = enableCardActions ? [
+    { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (records: DemoItem[]) => alert(`Bearbeiten: ${records[0].name}`) },
+    { icon: <IconMail size={14} />, label: "E-Mail senden", onClick: (records: DemoItem[]) => alert(`E-Mail an: ${records[0].email}`) },
+    { icon: <IconTrash size={14} />, label: "Löschen", onClick: (records: DemoItem[]) => alert(`Löschen: ${records[0].name}`) },
+  ] : undefined;
+
   const [selectedRecords, setSelectedRecords] = useState<DemoItem[]>([]);
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -160,13 +166,7 @@ export default function App() {
             records={records}
             fields={fields}
             {...sharedProps}
-            {...(enableCardActions && {
-              cardActions: [
-                { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (record: DemoItem) => alert(`Bearbeiten: ${record.name}`) },
-                { icon: <IconMail size={14} />, label: "E-Mail senden", onClick: (record: DemoItem) => alert(`E-Mail an: ${record.email}`) },
-                { icon: <IconTrash size={14} />, label: "Löschen", color: "red", onClick: (record: DemoItem) => alert(`Löschen: ${record.name}`) },
-              ],
-            })}
+            {...(demoActions && { actions: demoActions })}
           />
         ) : (
           <Box my="md">

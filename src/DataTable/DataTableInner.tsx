@@ -65,7 +65,7 @@ export interface Field<T> {
   column: DataTableColumn<T>;
 }
 
-interface Action<T extends BaseEntity> {
+export interface Action<T extends BaseEntity> {
   icon?: React.ReactNode;
   label: string;
   onClick: (records: T[]) => void;
@@ -518,6 +518,9 @@ export function DataTableInner<T extends BaseEntity>({
                 })}
                 {...(rowExpansion && {
                   rowExpansion: { content: rowExpansion.content },
+                })}
+                {...(actions && actions.length > 0 && {
+                  actions,
                 })}
               />
             </Box>

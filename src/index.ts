@@ -20,6 +20,7 @@ export type {
   Field,
   StepConfig,
   TabOption,
+  Action,
 } from "./DataTable/DataTableInner.tsx";
 export { DataTable } from "./DataTable/DataTable.tsx";
 export { CreateModal } from "./DataTable/CreateModal.tsx";
