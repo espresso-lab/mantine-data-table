@@ -6,7 +6,7 @@ import { Field } from "./DataTable/DataTableInner";
 import { useState } from "react";
 import { sortData } from "./utils/sort";
 import { DataTable as MantineDataTable, DataTableSortStatus } from "mantine-datatable";
-import { IconSearch, IconUsers, IconShield, IconUserCog } from "@tabler/icons-react";
+import { IconSearch, IconUsers, IconShield, IconUserCog, IconPencil, IconMail, IconTrash } from "@tabler/icons-react";
 
 interface DemoItem {
   id: number;
@@ -49,6 +49,7 @@ export default function App() {
   const [enableTabs, setEnableTabs] = useState(false);
   const [enableFilter, setEnableFilter] = useState(false);
   const [enableRowExpansion, setEnableRowExpansion] = useState(false);
+  const [enableCardActions, setEnableCardActions] = useState(true);
 
   const [selectedRecords, setSelectedRecords] = useState<DemoItem[]>([]);
   const [sortField, setSortField] = useState("name");
@@ -127,6 +128,7 @@ export default function App() {
           <Switch label="Tabs" checked={enableTabs} onChange={(e) => setEnableTabs(e.currentTarget.checked)} />
           <Switch label="Filter" checked={enableFilter} onChange={(e) => setEnableFilter(e.currentTarget.checked)} />
           <Switch label="Row Expansion" checked={enableRowExpansion} onChange={(e) => setEnableRowExpansion(e.currentTarget.checked)} />
+          <Switch label="Card Actions" checked={enableCardActions} onChange={(e) => setEnableCardActions(e.currentTarget.checked)} />
           <Switch label="onRowClick" checked={enableOnRowClick} onChange={(e) => setEnableOnRowClick(e.currentTarget.checked)} />
         </Group>
 
@@ -158,6 +160,13 @@ export default function App() {
             records={records}
             fields={fields}
             {...sharedProps}
+            {...(enableCardActions && {
+              cardActions: [
+                { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (record: DemoItem) => alert(`Bearbeiten: ${record.name}`) },
+                { icon: <IconMail size={14} />, label: "E-Mail senden", onClick: (record: DemoItem) => alert(`E-Mail an: ${record.email}`) },
+                { icon: <IconTrash size={14} />, label: "Löschen", color: "red", onClick: (record: DemoItem) => alert(`Löschen: ${record.name}`) },
+              ],
+            })}
           />
         ) : (
           <Box my="md">

@@ -1,8 +1,15 @@
-import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Pagination, Select, Stack, Text } from "@mantine/core";
+import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Menu, Pagination, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
 import { Field } from "./DataTableInner";
 import React, { useState } from "react";
-import { IconChevronDown, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+import { IconChevronDown, IconDotsVertical, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+
+interface CardAction<T extends BaseEntity> {
+  icon?: React.ReactNode;
+  label: string;
+  color?: string;
+  onClick: (record: T) => void;
+}
 
 interface SortConfig {
   field: string;
@@ -17,6 +24,7 @@ interface MobileCardListProps<T extends BaseEntity> {
   selectedRecords?: T[];
   onSelectedRecordsChange?: (records: T[]) => void;
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
+  cardActions?: CardAction<T>[];
   pagination?: {
     totalRecords: number;
     recordsPerPage: number;
@@ -81,6 +89,7 @@ export function MobileCardList<T extends BaseEntity>({
   selectedRecords = [],
   onSelectedRecordsChange,
   onRowClick,
+  cardActions,
   pagination,
   sort,
   rowExpansion,
@@ -184,26 +193,57 @@ export function MobileCardList<T extends BaseEntity>({
                   }
                 }}
               >
-                {(selection || rowExpansion) && (
+                {(selection || rowExpansion || (cardActions && cardActions.length > 0)) && (
                   <Group px="sm" pt="sm" justify="space-between">
-                    {selection ? (
-                      <Checkbox
-                        checked={selected}
-                        onChange={() => toggleSelection(record)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : <span />}
-                    {rowExpansion && (
-                      <Box
-                        c="dimmed"
-                        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleExpansion(recordKey); }}
-                      >
-                        <IconChevronDown
-                          size={16}
-                          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }}
+                    <Group gap="xs">
+                      {rowExpansion && (
+                        <Box
+                          c="var(--mantine-primary-color-filled)"
+                          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleExpansion(recordKey); }}
+                        >
+                          <IconChevronDown
+                            size={16}
+                            style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 200ms" }}
+                          />
+                        </Box>
+                      )}
+                      {selection && (
+                        <Checkbox
+                          checked={selected}
+                          onChange={() => toggleSelection(record)}
+                          onClick={(e) => e.stopPropagation()}
                         />
-                      </Box>
+                      )}
+                    </Group>
+                    {cardActions && cardActions.length > 0 && (
+                      <Menu shadow="md" position="bottom-end">
+                        <Menu.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            size="sm"
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                          >
+                            <IconDotsVertical size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          {cardActions.map((action, actionIndex) => (
+                            <Menu.Item
+                              key={`card_action_${actionIndex}`}
+                              leftSection={action.icon}
+                              color={action.color}
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                action.onClick(record);
+                              }}
+                            >
+                              {action.label}
+                            </Menu.Item>
+                          ))}
+                        </Menu.Dropdown>
+                      </Menu>
                     )}
                   </Group>
                 )}
