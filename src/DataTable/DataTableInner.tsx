@@ -350,6 +350,7 @@ export function DataTableInner<T extends BaseEntity>({
             const hasAnyAction = hasUpdateAction || hasDeleteAction || hasCustomActions;
 
             return (
+              <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
               <Menu shadow="md">
                 <Menu.Target>
                   <Button
@@ -390,6 +391,7 @@ export function DataTableInner<T extends BaseEntity>({
                   )}
                 </Menu.Dropdown>
               </Menu>
+              </Box>
             );
           })()}
           {fields.find((field) => field.create) && (
