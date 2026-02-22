@@ -322,6 +322,34 @@ export function DataTableInner<T extends BaseEntity>({
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  const hasUpdateField = fields.some((field) => field.update);
+  const hasDeleteField = fields.some((field) => field.delete);
+
+  const mobileActions: Action<T>[] = [];
+  if (hasUpdateField) {
+    mobileActions.push({
+      icon: <IconPencil size={14} />,
+      label: "Bearbeiten",
+      onClick: (records: T[]) => {
+        setSelectedRecords(records);
+        setUpdateModalOpen(true);
+      },
+    });
+  }
+  if (actions) {
+    mobileActions.push(...actions);
+  }
+  if (hasDeleteField) {
+    mobileActions.push({
+      icon: <IconTrash size={14} />,
+      label: "Löschen",
+      onClick: (records: T[]) => {
+        setSelectedRecords(records);
+        setDeleteModalOpen(true);
+      },
+    });
+  }
+
   return (
     <>
       <Group gap="xs" justify={title ? "space-between" : "end"} align="center" wrap="wrap">
@@ -519,8 +547,10 @@ export function DataTableInner<T extends BaseEntity>({
                 {...(rowExpansion && {
                   rowExpansion: { content: rowExpansion.content },
                 })}
-                {...(actions && actions.length > 0 && {
-                  actions,
+                {...(mobileActions.length > 0 && {
+                  actions: mobileActions,
+                  canUpdate,
+                  canDelete,
                 })}
               />
             </Box>

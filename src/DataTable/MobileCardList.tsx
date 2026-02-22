@@ -18,6 +18,8 @@ interface MobileCardListProps<T extends BaseEntity> {
   onSelectedRecordsChange?: (records: T[]) => void;
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
   actions?: Action<T>[];
+  canUpdate?: (record: T) => boolean;
+  canDelete?: (record: T) => boolean;
   pagination?: {
     totalRecords: number;
     recordsPerPage: number;
@@ -83,6 +85,8 @@ export function MobileCardList<T extends BaseEntity>({
   onSelectedRecordsChange,
   onRowClick,
   actions,
+  canUpdate,
+  canDelete,
   pagination,
   sort,
   rowExpansion,
@@ -209,7 +213,14 @@ export function MobileCardList<T extends BaseEntity>({
                         />
                       )}
                     </Group>
-                    {actions && actions.length > 0 && (
+                    {actions && actions.length > 0 && (() => {
+                      const filteredActions = actions.filter((action) => {
+                        if (action.label === "Bearbeiten" && canUpdate && !canUpdate(record)) return false;
+                        if (action.label === "Löschen" && canDelete && !canDelete(record)) return false;
+                        return true;
+                      });
+                      if (filteredActions.length === 0) return null;
+                      return (
                       <Menu shadow="md" position="bottom-end">
                         <Menu.Target>
                           <ActionIcon
@@ -222,7 +233,7 @@ export function MobileCardList<T extends BaseEntity>({
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          {actions.map((action, actionIndex) => (
+                          {filteredActions.map((action, actionIndex) => (
                             <Menu.Item
                               key={`card_action_${actionIndex}`}
                               leftSection={action.icon}
@@ -236,7 +247,8 @@ export function MobileCardList<T extends BaseEntity>({
                           ))}
                         </Menu.Dropdown>
                       </Menu>
-                    )}
+                      );
+                    })()}
                   </Group>
                 )}
                 {listFields.map((field, fieldIndex) => (
