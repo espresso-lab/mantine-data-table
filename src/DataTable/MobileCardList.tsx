@@ -1,15 +1,8 @@
 import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Menu, Pagination, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
-import { Field } from "./DataTableInner";
+import { Action, Field } from "./DataTableInner";
 import React, { useState } from "react";
 import { IconChevronDown, IconDotsVertical, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
-
-interface CardAction<T extends BaseEntity> {
-  icon?: React.ReactNode;
-  label: string;
-  color?: string;
-  onClick: (record: T) => void;
-}
 
 interface SortConfig {
   field: string;
@@ -24,7 +17,7 @@ interface MobileCardListProps<T extends BaseEntity> {
   selectedRecords?: T[];
   onSelectedRecordsChange?: (records: T[]) => void;
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
-  cardActions?: CardAction<T>[];
+  actions?: Action<T>[];
   pagination?: {
     totalRecords: number;
     recordsPerPage: number;
@@ -89,7 +82,7 @@ export function MobileCardList<T extends BaseEntity>({
   selectedRecords = [],
   onSelectedRecordsChange,
   onRowClick,
-  cardActions,
+  actions,
   pagination,
   sort,
   rowExpansion,
@@ -193,7 +186,7 @@ export function MobileCardList<T extends BaseEntity>({
                   }
                 }}
               >
-                {(selection || rowExpansion || (cardActions && cardActions.length > 0)) && (
+                {(selection || rowExpansion || (actions && actions.length > 0)) && (
                   <Group px="sm" pt="sm" justify="space-between">
                     <Group gap="xs">
                       {rowExpansion && (
@@ -216,7 +209,7 @@ export function MobileCardList<T extends BaseEntity>({
                         />
                       )}
                     </Group>
-                    {cardActions && cardActions.length > 0 && (
+                    {actions && actions.length > 0 && (
                       <Menu shadow="md" position="bottom-end">
                         <Menu.Target>
                           <ActionIcon
@@ -229,14 +222,13 @@ export function MobileCardList<T extends BaseEntity>({
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          {cardActions.map((action, actionIndex) => (
+                          {actions.map((action, actionIndex) => (
                             <Menu.Item
                               key={`card_action_${actionIndex}`}
                               leftSection={action.icon}
-                              color={action.color}
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
-                                action.onClick(record);
+                                action.onClick([record]);
                               }}
                             >
                               {action.label}
