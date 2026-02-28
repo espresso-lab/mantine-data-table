@@ -76,6 +76,8 @@ export interface TabOption {
   label: string;
   icon?: React.ReactNode;
   queryParams?: Record<string, string | number | boolean | null>;
+  apiPath?: string;
+  mutationApiPath?: string;
 }
 
 export interface StepConfig {
@@ -168,8 +170,10 @@ export function DataTableInner<T extends BaseEntity>({
     }
   };
 
-  const currentTabParams =
-    tabs?.find((tab) => tab.value === activeTab)?.queryParams || {};
+  const currentTab = tabs?.find((tab) => tab.value === activeTab);
+  const currentTabParams = currentTab?.queryParams || {};
+  const effectiveApiPath = currentTab?.apiPath ?? apiPath;
+  const effectiveMutationApiPath = currentTab?.mutationApiPath ?? mutationApiPath ?? effectiveApiPath;
   const allQueryParams = { ...queryParams, ...currentTabParams };
 
   // Build query string like ?id=1&name=test
@@ -189,7 +193,7 @@ export function DataTableInner<T extends BaseEntity>({
     isError,
     isRefetching,
     refetch,
-  } = useGetAll<T>(apiPath + queryString, effectiveQueryKey);
+  } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
 
   const { queryClient } = useDataTable();
 
@@ -572,7 +576,7 @@ export function DataTableInner<T extends BaseEntity>({
           <UpdateModal<T>
             fields={fields.filter((field) => field.update)}
             queryKey={queryKey}
-            apiPath={mutationApiPath ?? apiPath}
+            apiPath={effectiveMutationApiPath}
             id={selectedRecords[0].id}
             onClose={() => {
               setUpdateModalOpen(false);
@@ -598,7 +602,7 @@ export function DataTableInner<T extends BaseEntity>({
               setSelectedRecords([]);
             }}
             queryKey={queryKey}
-            apiPath={mutationApiPath ?? apiPath}
+            apiPath={effectiveMutationApiPath}
             selectedRecords={selectedRecords}
           />
         </Modal>
@@ -613,7 +617,7 @@ export function DataTableInner<T extends BaseEntity>({
       >
         <CreateModal<T>
           queryKey={queryKey}
-          apiPath={mutationApiPath ?? apiPath}
+          apiPath={effectiveMutationApiPath}
           onClose={() => {
             setCreateModalOpen(false);
           }}
