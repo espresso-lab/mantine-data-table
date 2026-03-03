@@ -69,6 +69,7 @@ export interface Action<T extends BaseEntity> {
   icon?: React.ReactNode;
   label: string;
   onClick: (records: T[]) => void;
+  disabled?: (records: T[]) => boolean;
 }
 
 export interface TabOption {
@@ -408,6 +409,7 @@ export function DataTableInner<T extends BaseEntity>({
                       {...(action.icon && { leftSection: action.icon })}
                       key={`custom_action_${index}`}
                       onClick={() => action.onClick(selectedRecords)}
+                      disabled={action.disabled?.(selectedRecords) ?? false}
                     >
                       {action.label}
                     </Menu.Item>
