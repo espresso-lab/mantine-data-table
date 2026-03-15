@@ -24,8 +24,6 @@ export function DeleteModal<T extends BaseEntity>({
 
   const [records, setRecords] = useState<T[]>(selectedRecords);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Combined loading state for clean usage
   const isLoading = isDeleting || isDeletePending;
 
   useEffect(() => {

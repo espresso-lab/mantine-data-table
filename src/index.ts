@@ -1,6 +1,6 @@
 export type { BaseEntity } from "./Hooks/useApi";
 export {
-  getApiHeaders,
+  parseApiError,
   api,
   useGetOne,
   useDeleteOne,
@@ -31,7 +31,8 @@ export { DeleteModal } from "./DataTable/DeleteModal.tsx";
 export type { DeleteModalProps } from "./DataTable/DeleteModal.tsx";
 export { MobileCardList } from "./DataTable/MobileCardList.tsx";
 
-export { usePersistentState } from "./Hooks/usePersitentState.ts";
+export { usePersistentState } from "./Hooks/usePersistentState.ts";
 export { useDataTable } from "./Hooks/useDataTable.ts";
 export { DataTableProvider } from "./Context/DataTableContext.tsx";
+export type { GetHeaders } from "./Context/DataTableContext.tsx";
 export { sortData } from "./utils/sort.ts";

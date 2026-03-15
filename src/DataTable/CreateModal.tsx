@@ -11,8 +11,8 @@ import {
 import { useForm } from "@mantine/form";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
-import { Fragment, useState } from "react"; // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
+import { Fragment, useState } from "react";
+// @ts-expect-error - FormRule not publicly exported from @mantine/form
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
 
@@ -79,12 +79,8 @@ export function CreateModal<T extends BaseEntity>({
       .reduce(
         (acc, field) => {
           acc[field.id as keyof T] = (value: never, values: T) => {
-            if (field.conditional && !field.conditional(values)) {
-              return null;
-            }
-            if (!resolveRequired(field, values)) {
-              return null;
-            }
+            if (field.conditional && !field.conditional(values)) return null;
+            if (!resolveRequired(field, values)) return null;
             return value ? null : "Pflichtfeld";
           };
           return acc;

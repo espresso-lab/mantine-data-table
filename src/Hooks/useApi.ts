@@ -1,5 +1,8 @@
-// Utility to parse API errors into a standard object
-export function parseApiError(error: unknown): { message: string; code?: string; details?: any } {
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useDataTable } from "./useDataTable.ts";
+import type { GetHeaders } from "../Context/DataTableContext.tsx";
+
+export function parseApiError(error: unknown): { message: string; code?: string; details?: unknown } {
   if (typeof error === "string") {
     try {
       const parsed = JSON.parse(error);
@@ -18,39 +21,23 @@ export function parseApiError(error: unknown): { message: string; code?: string;
   return { message: "Unbekannter Fehler" };
 }
 
-// Helper function to handle HTTP error responses consistently
-async function handleHttpError(resp: Response): Promise<never> {
-  // Read the response body as text first, then try to parse as JSON
-  // This approach avoids the "body already consumed" issue entirely
-  const responseText = await resp.text();
-  
-  if (!responseText) {
-    // No body content, use status info
-    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+async function fetchWithError(url: string, init: RequestInit): Promise<Response> {
+  const resp = await fetch(url, init);
+  if (resp.status >= 400) {
+    const responseText = await resp.text();
+    if (!responseText) {
+      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    }
+    let errorJson: { message?: string; error?: string } | null = null;
+    try {
+      errorJson = JSON.parse(responseText);
+    } catch {
+      throw new Error(responseText);
+    }
+    throw new Error(errorJson?.message ?? errorJson?.error ?? responseText);
   }
-  
-  // Try to parse as JSON
-  let errorJson: { message?: string; error?: string; details?: string } | null = null;
-  try {
-    errorJson = JSON.parse(responseText);
-  } catch {
-    // Not valid JSON, use the raw text
-    throw new Error(responseText);
-  }
-  
-  // Extract the message from the parsed JSON
-  if (errorJson?.message) {
-    throw new Error(errorJson.message);
-  } else if (errorJson?.error) {
-    throw new Error(errorJson.error);
-  } else {
-    // JSON was parsed but no message/error field found
-    throw new Error(responseText);
-  }
+  return resp;
 }
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getIdToken } from "@espresso-lab/mantine-cognito";
-import { useDataTable } from "./useDataTable.ts";
 
 export interface BaseEntity {
   id: string | number;
@@ -58,140 +45,72 @@ export interface BaseEntity {
 
 type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-function getAssumeOrg(): HeadersInit {
-  const org = localStorage.getItem("a360.assumed-org");
-  return org ? { "X-Assume-Org": org } : {};
-}
-
-export async function getApiHeaders() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${(await getIdToken()) ?? ""}`,
-    ...getAssumeOrg(),
-  };
-}
-
-export async function getAll<T extends BaseEntity>(path: string): Promise<T[]> {
-  return fetch(path, {
-    method: "GET",
-    headers: await getApiHeaders(),
-  })
-    .then(async (resp) => {
-      if (resp.status >= 400) {
-        await handleHttpError(resp);
-      }
-      return resp;
-    })
-    .then((resp) => resp.json())
-    .then((data) => data as T[]);
+export async function getAll<T extends BaseEntity>(
+  path: string,
+  getHeaders: GetHeaders,
+): Promise<T[]> {
+  const resp = await fetchWithError(path, { method: "GET", headers: await getHeaders() });
+  return resp.json();
 }
 
 export async function getOne<T extends BaseEntity>(
   path: string,
   id: string | number,
+  getHeaders: GetHeaders,
 ): Promise<T> {
-  return fetch(`${path}/${id}`, {
-    method: "GET",
-    headers: await getApiHeaders(),
-  })
-    .then(async (resp) => {
-      if (resp.status >= 400) {
-        await handleHttpError(resp);
-      }
-      return resp;
-    })
-    .then((resp) => resp.json())
-    .then((data) => data as T);
+  const resp = await fetchWithError(`${path}/${id}`, { method: "GET", headers: await getHeaders() });
+  return resp.json();
 }
 
 export async function deleteOne(
   path: string,
   id: string | number,
+  getHeaders: GetHeaders,
 ): Promise<void> {
-  const resp = await fetch(`${path}/${id}`, {
-    method: "DELETE",
-    headers: await getApiHeaders(),
-  });
-  
-  if (resp.status >= 400) {
-    await handleHttpError(resp);
-  }
+  await fetchWithError(`${path}/${id}`, { method: "DELETE", headers: await getHeaders() });
 }
 
 export async function createOne<C, T extends BaseEntity>(
   path: string,
   item: C,
+  getHeaders: GetHeaders,
 ): Promise<T> {
-  return fetch(path, {
+  const resp = await fetchWithError(path, {
     method: "POST",
-    headers: await getApiHeaders(),
+    headers: await getHeaders(),
     body: JSON.stringify(item),
-  })
-    .then(async (resp) => {
-      if (resp.status >= 400) {
-        await handleHttpError(resp);
-      }
-      return resp;
-    })
-    .then((resp) => {
-      if (resp.status == 204) {
-        return item;
-      } else {
-        return resp.json();
-      }
-    })
-    .then((data) => data as T);
+  });
+  if (resp.status === 204) return item as unknown as T;
+  return resp.json();
 }
 
 export async function api<R, U>(
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   path: string,
+  getHeaders: GetHeaders,
   payload?: U,
 ): Promise<R> {
-  return fetch(path, {
+  const resp = await fetchWithError(path, {
     method,
-    headers: await getApiHeaders(),
+    headers: await getHeaders(),
     body: payload ? JSON.stringify(payload) : undefined,
-  })
-    .then(async (resp) => {
-      if (resp.status >= 400) {
-        await handleHttpError(resp);
-      }
-      return resp;
-    })
-    .then((resp) => {
-      if (resp.status == 204) {
-        return;
-      } else {
-        return resp.json();
-      }
-    })
-    .then((data) => data as R);
+  });
+  if (resp.status === 204) return undefined as R;
+  return resp.json();
 }
 
 export async function updateOne<T extends BaseEntity>(
   path: string,
   item: AtLeast<T, "id">,
+  getHeaders: GetHeaders,
 ): Promise<T> {
-  return fetch(`${path}/${item.id}`, {
+  const resp = await fetchWithError(`${path}/${item.id}`, {
     method: "PUT",
-    headers: await getApiHeaders(),
+    headers: await getHeaders(),
     body: JSON.stringify(item),
-  })
-    .then(async (resp) => {
-      if (resp.status >= 400) {
-        await handleHttpError(resp);
-      }
-      return resp;
-    })
-    .then((resp) => {
-      if (resp.status == 204) {
-        return item;
-      } else {
-        return resp.json();
-      }
-    })
-    .then((data) => data as T);
+  });
+  if (resp.status === 204) return item as T;
+  return resp.json();
 }
 
 export function useGetOne<T extends BaseEntity>(
@@ -199,10 +118,10 @@ export function useGetOne<T extends BaseEntity>(
   queryKey: Array<string | number>,
   id?: string | number,
 ) {
-  const { baseUrl } = useDataTable();
+  const { baseUrl, getHeaders } = useDataTable();
   return useQuery<T>({
     queryKey: [...queryKey.map((k) => k.toString()), String(id?.toString())],
-    queryFn: () => getOne<T>(`${baseUrl}${apiPath}`, id!),
+    queryFn: () => getOne<T>(`${baseUrl}${apiPath}`, id!, getHeaders),
     enabled: !!id,
   });
 }
@@ -212,11 +131,11 @@ export function useGetAll<T extends BaseEntity>(
   queryKey: Array<string | number>,
   enabled: boolean = true,
 ) {
-  const { baseUrl } = useDataTable();
+  const { baseUrl, getHeaders } = useDataTable();
   return useQuery<T[]>({
     queryKey: [...queryKey.map((k) => k.toString())],
-    queryFn: () => getAll<T>(`${baseUrl}${apiPath}`),
-    enabled
+    queryFn: () => getAll<T>(`${baseUrl}${apiPath}`, getHeaders),
+    enabled,
   });
 }
 
@@ -224,18 +143,15 @@ export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { baseUrl, queryClient } = useDataTable();
+  const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, Omit<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
     mutationFn: (item) =>
-      createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item),
+      createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())]
       });
-    },
-    onError(error) {
-      parseApiError(error);
     },
   });
 }
@@ -244,18 +160,15 @@ export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { baseUrl, queryClient } = useDataTable();
+  const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, AtLeast<T, "id">>({
     mutationKey: [...queryKey.map((k) => k.toString())],
-    mutationFn: (item: AtLeast<T, "id">) =>
-      updateOne<T>(`${baseUrl}${apiPath}`, item),
+    mutationFn: (item) =>
+      updateOne<T>(`${baseUrl}${apiPath}`, item, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())]
       });
-    },
-    onError(error) {
-      parseApiError(error);
     },
   });
 }
@@ -264,17 +177,14 @@ export function useDeleteOne(
   apiPath: string,
   queryKey: Array<string | number>,
 ) {
-  const { baseUrl, queryClient } = useDataTable();
+  const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<void, Error, string | number>({
     mutationKey: [...queryKey.map((k) => k.toString())],
-    mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id),
+    mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
         queryKey: [...queryKey.map((k) => k.toString())]
       });
-    },
-    onError(error) {
-      parseApiError(error);
     },
   });
 }
