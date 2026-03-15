@@ -7,7 +7,7 @@ import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus } f
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 import { useDataTable } from "../Hooks/useDataTable.ts";
-import { usePersistentState } from "../Hooks/usePersitentState.ts";
+import { usePersistentState } from "../Hooks/usePersistentState.ts";
 import { sortData } from "../utils/sort";
 import { MobileCardList } from "./MobileCardList";
 
@@ -117,8 +117,8 @@ export interface DataTableProps<T extends BaseEntity> {
     allowMultiple?: boolean;
     content: (record: T) => React.ReactNode;
     expanded?: {
-      recordIds: string[];
-      onRecordIdsChange: (recordIds: string[]) => void;
+      recordIds: unknown[];
+      onRecordIdsChange: (recordIds: unknown[]) => void;
     };
   };
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
@@ -177,7 +177,6 @@ export function DataTableInner<T extends BaseEntity>({
   const effectiveMutationApiPath = currentTab?.mutationApiPath ?? mutationApiPath ?? effectiveApiPath;
   const allQueryParams = { ...queryParams, ...currentTabParams };
 
-  // Build query string like ?id=1&name=test
   const queryString: string = allQueryParams
     ? "?" +
       Object.entries(allQueryParams)
@@ -206,7 +205,6 @@ export function DataTableInner<T extends BaseEntity>({
     );
   }, [allData, connectedQueryKeys, queryClient]);
 
-    // Filter data
     const filteredData =
         (!allData || !Array.isArray(allData))
             ? []
@@ -220,16 +218,17 @@ export function DataTableInner<T extends BaseEntity>({
                     const recordValue = record[key];
                     if (Array.isArray(filter.value)) {
                         if (Array.isArray(recordValue)) {
-                            return recordValue.some((item: any) => {
+                            return recordValue.some((item: unknown) => {
                                 if (typeof item === "string" || typeof item === "number") {
                                     return filter.value!.includes(String(item));
                                 }
                                 if (item && typeof item === "object") {
-                                    if ("id" in item && filter.value!.includes(item.id)) {
+                                    const obj = item as Record<string, unknown>;
+                                    if ("id" in obj && filter.value!.includes(obj.id as string)) {
                                         return true;
                                     }
-                                    for (const prop in item) {
-                                        const propValue = item[prop];
+                                    for (const prop in obj) {
+                                        const propValue = obj[prop];
                                         if (
                                             typeof propValue === "string" &&
                                             filter.value!.includes(propValue)
@@ -239,9 +238,9 @@ export function DataTableInner<T extends BaseEntity>({
                                         if (
                                             propValue &&
                                             typeof propValue === "object" &&
-                                            "id" in propValue
+                                            "id" in (propValue as Record<string, unknown>)
                                         ) {
-                                            if (filter.value!.includes(propValue.id)) {
+                                            if (filter.value!.includes((propValue as Record<string, unknown>).id as string)) {
                                                 return true;
                                             }
                                         }
@@ -255,7 +254,7 @@ export function DataTableInner<T extends BaseEntity>({
                             typeof recordValue === "object" &&
                             "id" in recordValue
                         ) {
-                            return filter.value.includes((recordValue as any).id);
+                            return filter.value.includes((recordValue as Record<string, unknown>).id as string);
                         }
                         return false;
                     }
@@ -300,14 +299,12 @@ export function DataTableInner<T extends BaseEntity>({
     }
   };
 
-  // Sort data
   const sortedData = sortData(
     filteredData,
     sortStatus.columnAccessor as keyof T,
     sortStatus.direction,
   );
 
-  // Handle pagination
   const [pageSize, setPageSize] = usePersistentState(
     PAGE_SIZES[1],
     "mantine-table-page-size",
@@ -318,7 +315,6 @@ export function DataTableInner<T extends BaseEntity>({
 
   const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
 
-  // Reset selection when tab changes
   useEffect(() => {
     setSelectedRecords([]);
   }, [activeTab]);
@@ -483,9 +479,9 @@ export function DataTableInner<T extends BaseEntity>({
       {!isLoading && !isRefetching && (
         <>
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
-            {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-            {/* @ts-expect-error */}
+            {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
             <MantineDataTable
+              withTableBorder
               my="md"
               striped
               highlightOnHover

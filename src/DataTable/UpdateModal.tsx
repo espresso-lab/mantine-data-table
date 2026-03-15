@@ -14,8 +14,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useForm } from "@mantine/form";
 import { BaseEntity, useGetOne, useUpdateOne } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTableInner.tsx";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
+// @ts-expect-error - FormRule not publicly exported from @mantine/form
 import type { FormRule } from "@mantine/form/lib/types";
 import { DateInput } from "@mantine/dates";
 
@@ -73,9 +72,7 @@ export function UpdateModal<T extends BaseEntity>({
       .reduce(
         (acc, field) => {
           acc[field.id as keyof T] = (value: never, values: T) => {
-            if (field.conditional && !field.conditional(values)) {
-              return null;
-            }
+            if (field.conditional && !field.conditional(values)) return null;
             const isReq = typeof field.required === "function"
               ? field.required(values)
               : !!field.required;
@@ -90,11 +87,7 @@ export function UpdateModal<T extends BaseEntity>({
 
   useEffect(() => {
     if (data) {
-
-      // Start with all API data, then process field-specific transformations
       const values = { ...data } as T;
-      
-      // Apply field-specific transformations for defined fields
       fields.forEach((field) => {
         const key = field.id as keyof T;
         if (field.type === "boolean" && values[key] === null) {
@@ -110,8 +103,6 @@ export function UpdateModal<T extends BaseEntity>({
     }
   }, [data]);
 
-
-  
   function resolveRequired(field: Field<T>, values?: Partial<T>): boolean {
     if (typeof field.required === "function") {
       return field.required(values ?? ({} as Partial<T>));
@@ -142,8 +133,8 @@ export function UpdateModal<T extends BaseEntity>({
           <NumberInput
             decimalSeparator=","
             label={field.column.title}
-            placeholder={field.placeholder ?? ""}
             key={form.key(field.id)}
+            placeholder={field.placeholder ?? ""}
             {...form.getInputProps(field.id as string)}
             required={isRequired}
           />
