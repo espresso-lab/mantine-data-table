@@ -481,7 +481,6 @@ export function DataTableInner<T extends BaseEntity>({
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
             {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
             <MantineDataTable
-              withTableBorder
               my="md"
               striped
               highlightOnHover
