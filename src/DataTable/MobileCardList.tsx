@@ -172,8 +172,8 @@ export function MobileCardList<T extends BaseEntity>({
         return (
           <React.Fragment key={recordKey}>
             <Box
-              bg={selected ? "var(--mantine-primary-color-light)" : index % 2 === 0 ? "var(--mantine-color-gray-0)" : "white"}
-              bd={!selected ? "1px solid var(--mantine-color-gray-2)" : undefined}
+              bg={selected ? "var(--mantine-primary-color-light)" : "var(--mantine-color-body)"}
+              bd={!selected ? "1px solid var(--mantine-color-default-border)" : undefined}
               style={{
                 borderRadius: "var(--mantine-radius-md)",
                 overflow: "hidden",
