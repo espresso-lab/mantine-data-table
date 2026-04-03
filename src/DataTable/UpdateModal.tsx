@@ -217,7 +217,10 @@ export function UpdateModal<T extends BaseEntity>({
         </Stack>
       ) : (
         <form
-          onSubmit={form.onSubmit(async (values) => {
+          onSubmit={form.onSubmit(async (rawValues) => {
+            const values = Object.fromEntries(
+              Object.entries(rawValues as Record<string, unknown>).map(([k, v]) => [k, v === "" ? undefined : v]),
+            ) as unknown as typeof rawValues;
             await update({
               ...values,
               id,

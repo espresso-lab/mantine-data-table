@@ -182,7 +182,10 @@ export function CreateModal<T extends BaseEntity>({
       )}
 
       <form
-        onSubmit={form.onSubmit(async (values) => {
+        onSubmit={form.onSubmit(async (rawValues) => {
+          const values = Object.fromEntries(
+            Object.entries(rawValues as Record<string, unknown>).map(([k, v]) => [k, v === "" ? undefined : v]),
+          ) as unknown as typeof rawValues;
           if (recordId) {
             await update({ ...values, id: recordId } as T);
           } else {
