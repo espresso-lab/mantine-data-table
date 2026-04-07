@@ -259,7 +259,7 @@ export function MobileCardList<T extends BaseEntity>({
                 ))}
               </Box>
               {rowExpansion && (
-                <Collapse in={expanded}>
+                <Collapse expanded={expanded}>
                   <Divider />
                   <Box px="sm" py="sm">
                     {rowExpansion.content(record)}
