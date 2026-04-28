@@ -13,6 +13,35 @@ function tablerIconsResolve(): Plugin {
   };
 }
 
+const collapseReplace = (code: string) => code.replace(/\{in:(\w+),/g, "{expanded:$1,");
+
+function fixMantineDataTableCollapse(): Plugin {
+  return {
+    name: "fix-mantine-datatable-collapse",
+    transform(code, id) {
+      if (id.includes("mantine-datatable")) {
+        return { code: collapseReplace(code), map: null };
+      }
+    },
+    config: () => ({
+      optimizeDeps: {
+        rolldownOptions: {
+          plugins: [
+            {
+              name: "fix-mantine-datatable-collapse-optimized",
+              transform(code, id) {
+                if (id.includes("mantine-datatable")) {
+                  return { code: collapseReplace(code) };
+                }
+              },
+            },
+          ],
+        },
+      },
+    }),
+  };
+}
+
 export default defineConfig({
   build: {
     lib: {
@@ -44,6 +73,7 @@ export default defineConfig({
   plugins: [
     react(),
     tablerIconsResolve(),
+    fixMantineDataTableCollapse(),
     dts({ tsconfigPath: "./tsconfig.build.json" }),
   ],
 });
