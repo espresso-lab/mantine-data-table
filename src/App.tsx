@@ -50,6 +50,7 @@ export default function App() {
   const [enableFilter, setEnableFilter] = useState(false);
   const [enableRowExpansion, setEnableRowExpansion] = useState(false);
   const [enableCardActions, setEnableCardActions] = useState(true);
+  const [enableConditionalExpansion, setEnableConditionalExpansion] = useState(false);
 
   const demoActions = enableCardActions ? [
     { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (records: DemoItem[]) => alert(`Bearbeiten: ${records[0].name}`) },
@@ -134,6 +135,7 @@ export default function App() {
           <Switch label="Tabs" checked={enableTabs} onChange={(e) => setEnableTabs(e.currentTarget.checked)} />
           <Switch label="Filter" checked={enableFilter} onChange={(e) => setEnableFilter(e.currentTarget.checked)} />
           <Switch label="Row Expansion" checked={enableRowExpansion} onChange={(e) => setEnableRowExpansion(e.currentTarget.checked)} />
+          <Switch label="Conditional Expansion (nur Admin-Tab)" checked={enableConditionalExpansion} onChange={(e) => setEnableConditionalExpansion(e.currentTarget.checked)} />
           <Switch label="Card Actions" checked={enableCardActions} onChange={(e) => setEnableCardActions(e.currentTarget.checked)} />
           <Switch label="onRowClick" checked={enableOnRowClick} onChange={(e) => setEnableOnRowClick(e.currentTarget.checked)} />
         </Group>
@@ -201,6 +203,12 @@ export default function App() {
               })}
               {...(enableRowExpansion && {
                 rowExpansion: {
+                  content: ({ record }: { record: DemoItem }) => expansionContent(record),
+                },
+              })}
+              {...(enableConditionalExpansion && activeTab === "Admin" && {
+                rowExpansion: {
+                  allowMultiple: true,
                   content: ({ record }: { record: DemoItem }) => expansionContent(record),
                 },
               })}
