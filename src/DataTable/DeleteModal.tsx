@@ -1,12 +1,13 @@
 import { Alert, Button, Group, Text } from "@mantine/core";
 import { BaseEntity, useDeleteOne } from "../Hooks/useApi";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 export interface DeleteModalProps<T> {
   onClose: () => void;
   queryKey: (string | number)[];
   apiPath: string;
   selectedRecords: T[];
+  confirmMessage?: (records: T[]) => ReactNode;
 }
 
 export function DeleteModal<T extends BaseEntity>({
@@ -14,6 +15,7 @@ export function DeleteModal<T extends BaseEntity>({
   apiPath,
   onClose,
   selectedRecords,
+  confirmMessage,
 }: DeleteModalProps<T>) {
   const {
     mutateAsync: del,
@@ -45,7 +47,9 @@ export function DeleteModal<T extends BaseEntity>({
       )}
 
       <Text>
-        {records.length === 1
+        {confirmMessage
+          ? confirmMessage(records)
+          : records.length === 1
           ? `Soll ${records.length} Eintrag wirklich gelöscht werden?`
           : `Sollen ${records.length} Einträge wirklich gelöscht werden?`}
       </Text>

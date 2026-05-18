@@ -123,6 +123,7 @@ export interface DataTableProps<T extends BaseEntity> {
   };
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
   mobileCards?: boolean;
+  deleteConfirmMessage?: (records: T[]) => React.ReactNode;
 }
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
@@ -154,6 +155,7 @@ export function DataTableInner<T extends BaseEntity>({
   rowExpansion,
   onRowClick,
   mobileCards = false,
+  deleteConfirmMessage,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
@@ -601,6 +603,7 @@ export function DataTableInner<T extends BaseEntity>({
             queryKey={queryKey}
             apiPath={effectiveMutationApiPath}
             selectedRecords={selectedRecords}
+            confirmMessage={deleteConfirmMessage}
           />
         </Modal>
       )}
