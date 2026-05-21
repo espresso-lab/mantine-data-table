@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Box, Button, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
+import { ActionIcon, Alert, Box, Button, Flex, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useState } from "react";
 import { CreateModal } from "./CreateModal";
@@ -355,14 +355,27 @@ export function DataTableInner<T extends BaseEntity>({
 
   return (
     <>
-      <Group gap="xs" justify={title ? "space-between" : "end"} align="center" wrap="wrap">
+      <Flex
+        gap="xs"
+        align={{ base: "stretch", sm: "center" }}
+        direction={{ base: "column", sm: "row" }}
+        justify={title ? "space-between" : "flex-end"}
+        wrap="wrap"
+      >
         {title &&
           (typeof title === "string" ? (
             <Title order={4}>{title}</Title>
           ) : (
             title
           ))}
-        <Group align="center" gap="xs" wrap="wrap" justify="end" style={{ marginLeft: "auto" }}>
+        <Flex
+          align={{ base: "stretch", sm: "center" }}
+          direction={{ base: "column", sm: "row" }}
+          gap="xs"
+          wrap="wrap"
+          justify={{ base: "flex-start", sm: "flex-end" }}
+          ml={{ base: 0, sm: "auto" }}
+        >
           {showRefresh && (
             <ActionIcon
               variant="subtle"
@@ -435,8 +448,8 @@ export function DataTableInner<T extends BaseEntity>({
             </Button>
           )}
           {buttons}
-        </Group>
-      </Group>
+        </Flex>
+      </Flex>
 
       {tabs && tabs.length > 0 && (
         <Tabs value={activeTab} onChange={handleTabChange} mt="md">
