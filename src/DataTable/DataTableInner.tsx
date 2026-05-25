@@ -124,6 +124,8 @@ export interface DataTableProps<T extends BaseEntity> {
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
   mobileCards?: boolean;
   deleteConfirmMessage?: (records: T[]) => React.ReactNode;
+  editRecordId?: string | null;
+  onEditRecordIdChange?: (id: string | null) => void;
 }
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
@@ -156,6 +158,8 @@ export function DataTableInner<T extends BaseEntity>({
   onRowClick,
   mobileCards = false,
   deleteConfirmMessage,
+  editRecordId,
+  onEditRecordIdChange,
 }: DataTableProps<T>) {
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
@@ -324,6 +328,17 @@ export function DataTableInner<T extends BaseEntity>({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (editRecordId && sortedData.length > 0) {
+      const record = sortedData.find((r) => r.id === editRecordId);
+      if (record) {
+        setSelectedRecords([record]);
+        setUpdateModalOpen(true);
+        onEditRecordIdChange?.(null);
+      }
+    }
+  }, [editRecordId, sortedData]);
 
   const hasUpdateField = fields.some((field) => field.update);
   const hasDeleteField = fields.some((field) => field.delete);
