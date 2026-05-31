@@ -132,14 +132,6 @@ export function MobileCardList<T extends BaseEntity>({
     onRowClick?.({ record, index, event });
   };
 
-  if (records.length === 0) {
-    return (
-      <Text c="dimmed" ta="center" py="xl">
-        Keine Einträge gefunden
-      </Text>
-    );
-  }
-
   return (
     <Stack gap="sm" my="md">
       {((sort && sortOptions.length > 0) || filterFields.length > 0) && (
@@ -200,6 +192,12 @@ export function MobileCardList<T extends BaseEntity>({
             </Popover>
           )}
         </Group>
+      )}
+
+      {records.length === 0 && (
+        <Text c="dimmed" ta="center" py="xl">
+          Keine Einträge gefunden
+        </Text>
       )}
 
       {records.map((record, index) => {
