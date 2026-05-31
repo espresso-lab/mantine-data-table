@@ -165,7 +165,7 @@ export function MobileCardList<T extends BaseEntity>({
           {filterFields.length > 0 && (
             <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-end" withArrow shadow="md" trapFocus>
               <Popover.Target>
-                <Indicator disabled={!hasActiveFilter} color="blue" size={8} offset={4}>
+                <Indicator inline disabled={!hasActiveFilter} color="green" withBorder>
                   <ActionIcon
                     variant={hasActiveFilter ? "filled" : "default"}
                     size="input-sm"
@@ -184,7 +184,7 @@ export function MobileCardList<T extends BaseEntity>({
                         <Group gap="xs">
                           <Text fw={600} fz="sm">{(f.column.title as string) ?? f.id}</Text>
                           {f.column.filtering && (
-                            <Box w={8} h={8} bg="blue" style={{ borderRadius: "50%" }} />
+                            <Box w={8} h={8} bg="green" style={{ borderRadius: "50%" }} />
                           )}
                         </Group>
                       </Accordion.Control>
