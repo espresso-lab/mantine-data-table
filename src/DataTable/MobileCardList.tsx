@@ -1,8 +1,8 @@
-import { ActionIcon, Box, Checkbox, Collapse, Divider, Group, Menu, Pagination, Select, Stack, Text } from "@mantine/core";
+import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Menu, Pagination, Popover, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
 import { Action, Field } from "./DataTableInner";
 import React, { useState } from "react";
-import { IconChevronDown, IconDotsVertical, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+import { IconDotsVertical, IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
 
 interface SortConfig {
   field: string;
@@ -13,9 +13,6 @@ interface SortConfig {
 interface MobileCardListProps<T extends BaseEntity> {
   records: T[];
   fields: Field<T>[];
-  selection?: boolean;
-  selectedRecords?: T[];
-  onSelectedRecordsChange?: (records: T[]) => void;
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
   actions?: Action<T>[];
   canUpdate?: (record: T) => boolean;
@@ -30,7 +27,11 @@ interface MobileCardListProps<T extends BaseEntity> {
   };
   sort?: SortConfig;
   rowExpansion?: {
-    content: (record: T) => React.ReactNode;
+    content: (record: T, isMobile: boolean) => React.ReactNode;
+    expanded?: {
+      recordIds: unknown[];
+      onRecordIdsChange: (recordIds: unknown[]) => void;
+    };
   };
 }
 
@@ -80,9 +81,6 @@ function MobileCardRow<T extends BaseEntity>({ field, record }: { field: Field<T
 export function MobileCardList<T extends BaseEntity>({
   records,
   fields,
-  selection,
-  selectedRecords = [],
-  onSelectedRecordsChange,
   onRowClick,
   actions,
   canUpdate,
@@ -91,17 +89,34 @@ export function MobileCardList<T extends BaseEntity>({
   sort,
   rowExpansion,
 }: MobileCardListProps<T>) {
-  const [expandedIds, setExpandedIds] = useState<Set<string | number>>(new Set());
+  const [internalExpandedIds, setInternalExpandedIds] = useState<Set<string | number>>(new Set());
+  const controlledExpansion = rowExpansion?.expanded;
+
+  const isExpanded = (id: string | number) =>
+    controlledExpansion ? controlledExpansion.recordIds.includes(id) : internalExpandedIds.has(id);
 
   const toggleExpansion = (id: string | number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    if (controlledExpansion) {
+      const { recordIds, onRecordIdsChange } = controlledExpansion;
+      onRecordIdsChange(
+        recordIds.includes(id) ? recordIds.filter((r) => r !== id) : [...recordIds, id],
+      );
+    } else {
+      setInternalExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
   };
-  const listFields = fields.filter((f) => f.list && f.column);
+  const listFields = fields.filter((f) => f.list && f.column && !f.column.hidden);
+
+  const filterFields = fields.filter((f) => f.column && f.column.filter != null);
+  const activeFilterIds = filterFields.filter((f) => f.column.filtering).map((f) => f.id);
+  const hasActiveFilter = activeFilterIds.length > 0;
+  const defaultOpenFilters = hasActiveFilter ? activeFilterIds : filterFields.slice(0, 1).map((f) => f.id);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const sortOptions = listFields
     .filter((f) => f.column.sortable !== false)
@@ -113,24 +128,8 @@ export function MobileCardList<T extends BaseEntity>({
       return acc;
     }, []);
 
-  const isSelected = (record: T) =>
-    selectedRecords.some((r) => r.id === record.id);
-
-  const toggleSelection = (record: T) => {
-    if (!onSelectedRecordsChange) return;
-    if (isSelected(record)) {
-      onSelectedRecordsChange(selectedRecords.filter((r) => r.id !== record.id));
-    } else {
-      onSelectedRecordsChange([...selectedRecords, record]);
-    }
-  };
-
   const handleCardClick = (record: T, index: number, event: React.MouseEvent) => {
-    if (onRowClick) {
-      onRowClick({ record, index, event });
-    } else if (selection) {
-      toggleSelection(record);
-    }
+    onRowClick?.({ record, index, event });
   };
 
   if (records.length === 0) {
@@ -143,37 +142,75 @@ export function MobileCardList<T extends BaseEntity>({
 
   return (
     <Stack gap="sm" my="md">
-      {sort && sortOptions.length > 0 && (
-        <Group gap="xs" wrap="nowrap">
-          <Select
-            data={sortOptions}
-            value={sort.field}
-            onChange={(value) => value && sort.onSortChange(value, sort.direction)}
-            allowDeselect={false}
-            style={{ flex: 1 }}
-          />
-          <ActionIcon
-            variant="filled"
-            size="input-sm"
-            onClick={() => sort.onSortChange(sort.field, sort.direction === "asc" ? "desc" : "asc")}
-          >
-            {sort.direction === "asc" ? <IconSortAscending size={18} /> : <IconSortDescending size={18} />}
-          </ActionIcon>
+      {((sort && sortOptions.length > 0) || filterFields.length > 0) && (
+        <Group gap="xs" wrap="nowrap" justify="flex-end">
+          {sort && sortOptions.length > 0 && (
+            <>
+              <Select
+                data={sortOptions}
+                value={sort.field}
+                onChange={(value) => value && sort.onSortChange(value, sort.direction)}
+                allowDeselect={false}
+                style={{ flex: 1 }}
+              />
+              <ActionIcon
+                variant="filled"
+                size="input-sm"
+                onClick={() => sort.onSortChange(sort.field, sort.direction === "asc" ? "desc" : "asc")}
+              >
+                {sort.direction === "asc" ? <IconSortAscending size={18} /> : <IconSortDescending size={18} />}
+              </ActionIcon>
+            </>
+          )}
+          {filterFields.length > 0 && (
+            <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-end" withArrow shadow="md" trapFocus>
+              <Popover.Target>
+                <Indicator disabled={!hasActiveFilter} color="blue" size={8} offset={4}>
+                  <ActionIcon
+                    variant={hasActiveFilter ? "filled" : "default"}
+                    size="input-sm"
+                    onClick={() => setFilterOpen((o) => !o)}
+                    aria-label="Filter"
+                  >
+                    <IconFilter size={18} />
+                  </ActionIcon>
+                </Indicator>
+              </Popover.Target>
+              <Popover.Dropdown p={0}>
+                <Accordion multiple defaultValue={defaultOpenFilters} style={{ minWidth: 260, maxWidth: 320 }}>
+                  {filterFields.map((f) => (
+                    <Accordion.Item key={f.id} value={f.id}>
+                      <Accordion.Control>
+                        <Group gap="xs">
+                          <Text fw={600} fz="sm">{(f.column.title as string) ?? f.id}</Text>
+                          {f.column.filtering && (
+                            <Box w={8} h={8} bg="blue" style={{ borderRadius: "50%" }} />
+                          )}
+                        </Group>
+                      </Accordion.Control>
+                      <Accordion.Panel>
+                        {typeof f.column.filter === "function"
+                          ? f.column.filter({ close: () => setFilterOpen(false) })
+                          : f.column.filter}
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                  ))}
+                </Accordion>
+              </Popover.Dropdown>
+            </Popover>
+          )}
         </Group>
       )}
 
       {records.map((record, index) => {
-        const selected = isSelected(record);
-        const clickable = !!onRowClick || !!selection;
-
         const recordKey = record.id ?? index;
-        const expanded = expandedIds.has(recordKey);
+        const expanded = isExpanded(recordKey);
 
         return (
           <React.Fragment key={recordKey}>
             <Box
-              bg={selected ? "var(--mantine-primary-color-light)" : "var(--mantine-color-body)"}
-              bd={!selected ? "1px solid var(--mantine-color-default-border)" : undefined}
+              bg="var(--mantine-color-body)"
+              bd="1px solid var(--mantine-color-default-border)"
               style={{
                 borderRadius: "var(--mantine-radius-md)",
                 overflow: "hidden",
@@ -181,7 +218,7 @@ export function MobileCardList<T extends BaseEntity>({
             >
               <Box
                 w="100%"
-                style={{ cursor: clickable || rowExpansion ? "pointer" : "default" }}
+                style={{ cursor: onRowClick || rowExpansion ? "pointer" : "default" }}
                 onClick={(e: React.MouseEvent) => {
                   if (rowExpansion && !onRowClick) {
                     toggleExpansion(recordKey);
@@ -190,30 +227,9 @@ export function MobileCardList<T extends BaseEntity>({
                   }
                 }}
               >
-                {(selection || rowExpansion || (actions && actions.length > 0)) && (
-                  <Group px="sm" pt="sm" justify="space-between">
-                    <Group gap="xs">
-                      {rowExpansion && (
-                        <Box
-                          c="var(--mantine-primary-color-filled)"
-                          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleExpansion(recordKey); }}
-                        >
-                          <IconChevronDown
-                            size={16}
-                            style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 200ms" }}
-                          />
-                        </Box>
-                      )}
-                      {selection && (
-                        <Checkbox
-                          checked={selected}
-                          onChange={() => toggleSelection(record)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      )}
-                    </Group>
-                    {actions && actions.length > 0 && (() => {
+                {actions && actions.length > 0 && (
+                  <Group px="sm" pt="sm" justify="flex-end">
+                    {(() => {
                       const filteredActions = actions.filter((action) => {
                         if (action.label === "Bearbeiten" && canUpdate && !canUpdate(record)) return false;
                         if (action.label === "Löschen" && canDelete && !canDelete(record)) return false;
@@ -262,7 +278,7 @@ export function MobileCardList<T extends BaseEntity>({
                 <Collapse expanded={expanded}>
                   <Divider />
                   <Box px="sm" py="sm">
-                    {rowExpansion.content(record)}
+                    {rowExpansion.content(record, true)}
                   </Box>
                 </Collapse>
               )}

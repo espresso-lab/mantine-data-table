@@ -115,7 +115,7 @@ export interface DataTableProps<T extends BaseEntity> {
   showRefresh?: boolean;
   rowExpansion?: {
     allowMultiple?: boolean;
-    content: (record: T) => React.ReactNode;
+    content: (record: T, isMobile: boolean) => React.ReactNode;
     expanded?: {
       recordIds: unknown[];
       onRecordIdsChange: (recordIds: unknown[]) => void;
@@ -536,7 +536,7 @@ export function DataTableInner<T extends BaseEntity>({
               {...(rowExpansion && {
                 rowExpansion: {
                   allowMultiple: rowExpansion.allowMultiple ?? false,
-                  content: ({ record }: { record: T }) => rowExpansion.content(record),
+                  content: ({ record }: { record: T }) => rowExpansion.content(record, false),
                   ...(rowExpansion.expanded && {
                     expanded: rowExpansion.expanded,
                   }),
@@ -554,9 +554,6 @@ export function DataTableInner<T extends BaseEntity>({
               <MobileCardList
                 records={records}
                 fields={fields}
-                selection={selection}
-                selectedRecords={selectedRecords}
-                onSelectedRecordsChange={setSelectedRecords}
                 onRowClick={onRowClick}
                 sort={{
                   field: String(sortStatus.columnAccessor),
@@ -576,7 +573,10 @@ export function DataTableInner<T extends BaseEntity>({
                   },
                 })}
                 {...(rowExpansion && {
-                  rowExpansion: { content: rowExpansion.content },
+                  rowExpansion: {
+                    content: rowExpansion.content,
+                    ...(rowExpansion.expanded && { expanded: rowExpansion.expanded }),
+                  },
                 })}
                 {...(mobileActions.length > 0 && {
                   actions: mobileActions,
