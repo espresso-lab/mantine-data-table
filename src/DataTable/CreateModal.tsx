@@ -1,20 +1,7 @@
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Group,
-  NumberInput,
-  Stepper,
-  Textarea,
-  TextInput,
-} from "@mantine/core";
-import { useForm } from "@mantine/form";
+import { useState } from "react";
 import { BaseEntity, useAddOne, useUpdateOne } from "../Hooks/useApi";
-import { Field, StepConfig } from "./DataTableInner.tsx";
-import { Fragment, useState } from "react";
-// @ts-expect-error - FormRule not publicly exported from @mantine/form
-import type { FormRule } from "@mantine/form/lib/types";
-import { DateInput } from "@mantine/dates";
+import { Field, StepConfig } from "./DataTable.tsx";
+import { EntityForm } from "./EntityForm.tsx";
 
 export interface CreateModalProps<T> {
   fields: Field<T>[];
@@ -33,226 +20,35 @@ export function CreateModal<T extends BaseEntity>({
   steps,
   onCreated,
 }: CreateModalProps<T>) {
-  const [active, setActive] = useState(0);
-  const [hideButtons, setHideButtons] = useState<boolean>(false);
   const [recordId, setRecordId] = useState<string | number>();
 
-  const {
-    mutateAsync: create,
-    isError: isCreateError,
-    error: createError,
-    isPending: isCreatePending,
-  } = useAddOne<T>(apiPath, queryKey);
-  const { mutateAsync: update, isPending: isUpdatePending } = useUpdateOne<T>(
-    apiPath,
-    queryKey,
-  );
+  const { mutateAsync: create, isPending: isCreating, error } = useAddOne<T>(apiPath, queryKey);
+  const { mutateAsync: update, isPending: isUpdating } = useUpdateOne<T>(apiPath, queryKey);
 
-  const isPending = isCreatePending || isUpdatePending;
-
-  const stepsAvailable = [
-    ...new Set(
-      fields
-        .filter((f) => typeof f.step === "number")
-        .map((f) => f.step as number),
-    ),
-  ];
-
-  function resolveRequired(field: Field<T>, values?: Partial<T>): boolean {
-    if (typeof field.required === "function") {
-      return field.required(values ?? ({} as Partial<T>));
+  const persist = async (values: T): Promise<boolean> => {
+    try {
+      if (recordId != null) {
+        await update({ ...values, id: recordId });
+      } else {
+        const created = await create(values);
+        setRecordId(created.id);
+        onCreated?.(created.id);
+      }
+      return true;
+    } catch {
+      return false;
     }
-    return !!field.required;
-  }
-
-  const form = useForm({
-    mode: "uncontrolled",
-    initialValues: fields.reduce((acc, field) => {
-      acc[field.id as keyof T] =
-        field.type === "boolean"
-          ? (false as T[keyof T])
-          : (field.defaultValue ?? ("" as T[keyof T]));
-      return acc;
-    }, {} as T),
-    validate: fields
-      .filter((field) => field.required)
-      .reduce(
-        (acc, field) => {
-          acc[field.id as keyof T] = (value: never, values: T) => {
-            if (field.conditional && !field.conditional(values)) return null;
-            if (!resolveRequired(field, values)) return null;
-            return value ? null : "Pflichtfeld";
-          };
-          return acc;
-        },
-        {} as Partial<{ [Key in keyof T]: FormRule<T[Key], T> }>,
-      ),
-  });
-
-  function renderField(field: Field<T>) {
-    const formValues = form.getValues();
-    if (field.conditional && !field.conditional(formValues)) {
-      return null;
-    }
-    const isRequired = resolveRequired(field, formValues);
-    return (
-      <Fragment key={field.id}>
-        {(field.type === undefined || field.type == "text") && (
-          <TextInput
-            label={field.column.title}
-            key={form.key(field.id)}
-            placeholder={field.placeholder ?? ""}
-            {...form.getInputProps(field.id as string)}
-            type={field.id.includes("email") ? "email" : undefined}
-            required={isRequired}
-          />
-        )}
-
-        {field.type === "number" && (
-          <NumberInput
-            decimalSeparator=","
-            label={field.column.title}
-            placeholder={field.placeholder ?? ""}
-            key={form.key(field.id)}
-            {...form.getInputProps(field.id as string)}
-            required={isRequired}
-          />
-        )}
-
-        {field.type === "date" && (
-          <DateInput
-            label={field.column.title}
-            placeholder={field.placeholder ?? ""}
-            key={form.key(field.id)}
-            valueFormat={"DD.MM.YYYY"}
-            clearable
-            {...form.getInputProps(field.id as string)}
-            required={isRequired}
-          />
-        )}
-
-        {field.type === "boolean" && (
-          <Checkbox
-            mt="md"
-            label={field.column.title}
-            key={form.key(field.id)}
-            {...form.getInputProps(field.id as string, { type: "checkbox" })}
-            required={isRequired}
-          />
-        )}
-
-        {field.type === "textarea" && (
-          <Textarea
-            label={field.column.title}
-            placeholder={field.placeholder ?? ""}
-            key={form.key(field.id)}
-            {...form.getInputProps(field.id as string)}
-            minRows={3}
-            autosize
-            required={isRequired}
-          />
-        )}
-
-        {field.type === "custom" &&
-          field.render &&
-          field.render(
-            { ...form.getValues(), ...(recordId && { id: recordId }) } as T,
-            form.setValues,
-            setHideButtons,
-            {
-              error: form.getInputProps(field.id as string).error,
-              required: isRequired,
-            },
-          )}
-      </Fragment>
-    );
-  }
+  };
 
   return (
-    <>
-      {isCreateError && (
-        <Alert
-          variant="outline"
-          color="red"
-          title={createError?.name ?? "Fehler aufgetreten"}
-          mb="lg"
-        >
-          {createError?.message ?? "Fehler aufgetreten"}
-        </Alert>
-      )}
-
-      <form
-        onSubmit={form.onSubmit(async (rawValues) => {
-          const values = Object.fromEntries(
-            Object.entries(rawValues as Record<string, unknown>).map(([k, v]) => [k, v === "" ? undefined : v]),
-          ) as unknown as typeof rawValues;
-          if (recordId) {
-            await update({ ...values, id: recordId } as T);
-          } else {
-            const result = await create(values as T);
-            setRecordId(result.id);
-            onCreated?.(result.id);
-          }
-
-          if (stepsAvailable.length && active < stepsAvailable.length - 1) {
-            if (!isCreateError) {
-              setActive(active + 1);
-            }
-          } else {
-            if (!isCreateError) {
-              form.setInitialValues(values);
-              form.reset();
-              onClose();
-            }
-          }
-        })}
-      >
-        {stepsAvailable.length ? (
-          <Stepper active={active} size="sm">
-            {stepsAvailable.map((step) => (
-              <Stepper.Step
-                key={step}
-                {...(steps && steps[step - 1]
-                  ? { label: steps[step - 1].label }
-                  : {})}
-              >
-                {fields
-                  .filter((f) => f.step === step)
-                  .map((field) => renderField(field))}
-              </Stepper.Step>
-            ))}
-          </Stepper>
-        ) : (
-          fields.map((field) => renderField(field))
-        )}
-        {!hideButtons && (
-          <Group mt="md" justify="end">
-            <Button
-              onClick={() =>
-                stepsAvailable.length
-                  ? active === 0
-                    ? onClose()
-                    : setActive(active - 1)
-                  : onClose()
-              }
-              variant="outline"
-            >
-              {stepsAvailable.length
-                ? active === 0
-                  ? "Abbrechen"
-                  : "Zurück"
-                : "Abbrechen"}
-            </Button>
-            <Button type="submit" loading={isPending}>
-              {stepsAvailable.length
-                ? active === stepsAvailable.length - 1
-                  ? "Speichern"
-                  : "Weiter"
-                : "Speichern"}
-            </Button>
-          </Group>
-        )}
-      </form>
-    </>
+    <EntityForm
+      fields={fields}
+      steps={steps}
+      recordId={recordId}
+      submitting={isCreating || isUpdating}
+      error={error}
+      onPersist={persist}
+      onClose={onClose}
+    />
   );
 }

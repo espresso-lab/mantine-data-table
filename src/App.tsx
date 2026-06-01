@@ -4,11 +4,12 @@ import "mantine-datatable/styles.css";
 import { DatePicker } from "@mantine/dates";
 import { Badge, Box, Button, Checkbox, Container, Divider, Group, MantineProvider, Stack, Switch, Tabs, Text, TextInput, Title } from "@mantine/core";
 import { MobileCardList } from "./DataTable/MobileCardList";
-import { Field } from "./DataTable/DataTableInner";
-import { useState } from "react";
+import { SubTable, SubTableColumn } from "./DataTable/SubTable";
+import { Field } from "./DataTable/DataTable";
+import React, { useState } from "react";
 import { sortData } from "./utils/sort";
 import { DataTable as MantineDataTable, DataTableSortStatus } from "mantine-datatable";
-import { IconSearch, IconUsers, IconShield, IconUserCog, IconPencil, IconMail, IconTrash } from "@tabler/icons-react";
+import { IconSearch, IconUsers, IconShield, IconUserCog, IconPencil, IconMail, IconTrash, IconChevronRight } from "@tabler/icons-react";
 
 interface DemoItem {
   id: number;
@@ -36,6 +37,41 @@ const demoData: DemoItem[] = [
 
 const PAGE_SIZES = [3, 5, 10];
 
+interface SubEntry {
+  id: string;
+  date: string;
+  description: string;
+  category: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+const eur = (value: number) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
+
+function subEntries(record: DemoItem): SubEntry[] {
+  if (!record.active) return [];
+  const raw = [
+    { description: "Basislastschrift SEPA", category: "Lastschrift", debit: record.id * 12.6, credit: 0 },
+    { description: "Überweisung Eingang", category: "Gutschrift", debit: 0, credit: record.id * 8.4 },
+    { description: "Kontoführungsgebühr", category: "Lastschrift", debit: record.id * 2.5, credit: 0 },
+    { description: "Erstattung", category: "Gutschrift", debit: 0, credit: record.id * 3.1 },
+  ];
+  let balance = 0;
+  return raw.map((entry, index) => {
+    balance += entry.debit - entry.credit;
+    return {
+      id: `${record.id}-${index}`,
+      date: `2026-04-0${index + 1}`,
+      ...entry,
+      debit: Math.round(entry.debit * 100) / 100,
+      credit: Math.round(entry.credit * 100) / 100,
+      balance: Math.round(balance * 100) / 100,
+    };
+  });
+}
+
 export default function App() {
   const [enableSelection, setEnableSelection] = useState(true);
   const [enableSort, setEnableSort] = useState(true);
@@ -50,6 +86,12 @@ export default function App() {
   const [enableRowExpansion, setEnableRowExpansion] = useState(false);
   const [enableCardActions, setEnableCardActions] = useState(true);
   const [enableConditionalExpansion, setEnableConditionalExpansion] = useState(false);
+  const [enableSubFilter, setEnableSubFilter] = useState(false);
+  const [subCategoryFilter, setSubCategoryFilter] = useState<string[]>([]);
+  const [expandedIds, setExpandedIds] = useState<unknown[]>([]);
+
+  const toggleExpanded = (id: number) =>
+    setExpandedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const demoActions = enableCardActions ? [
     { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (records: DemoItem[]) => alert(`Bearbeiten: ${records[0].name}`) },
@@ -66,7 +108,48 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const fields: Field<DemoItem>[] = [
-    { id: "name", list: true, create: false, update: false, delete: false, column: { accessor: "name", title: "Name" } },
+    {
+      id: "name",
+      list: true,
+      create: false,
+      update: false,
+      delete: false,
+      column: {
+        accessor: "name",
+        title: "Name",
+        render: (record) => {
+          if (!enableRowExpansion) return <Text fz="sm">{record.name}</Text>;
+          const expandable = !enableConditionalExpansion || subEntries(record).length > 0;
+          return (
+            <Group gap="xs" wrap="nowrap" align="center">
+              {expandable ? (
+                <Box
+                  component="span"
+                  aria-label="Aufklappen"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    toggleExpanded(record.id);
+                  }}
+                  style={{ display: "inline-flex", flexShrink: 0, cursor: "pointer" }}
+                >
+                  <IconChevronRight
+                    size={16}
+                    style={{
+                      color: "var(--mantine-primary-color-filled)",
+                      transform: expandedIds.includes(record.id) ? "rotate(90deg)" : undefined,
+                      transition: "transform 200ms ease",
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Box w={16} style={{ flexShrink: 0 }} />
+              )}
+              <Text fz="sm">{record.name}</Text>
+            </Group>
+          );
+        },
+      },
+    },
     { id: "email", list: true, create: false, update: false, delete: false, column: { accessor: "email", title: "E-Mail" } },
     {
       id: "role",
@@ -142,16 +225,86 @@ export default function App() {
   const sorted = enableSort ? sortData(filtered, sortField as keyof DemoItem, sortDirection) : filtered;
   const records = enablePagination ? sorted.slice((page - 1) * pageSize, page * pageSize) : sorted;
 
-  const expansionContent = (record: DemoItem, isMobile = false) => (
-    <Stack gap={4}>
-      <Badge variant="light" size="xs" color={isMobile ? "grape" : "blue"}>
-        {isMobile ? "Mobile-Layout" : "Desktop-Layout"}
-      </Badge>
-      <Text fz="sm"><Text span fw={600}>ID:</Text> {record.id}</Text>
-      <Text fz="sm"><Text span fw={600}>E-Mail:</Text> {record.email}</Text>
-      <Text fz="sm"><Text span fw={600}>Status:</Text> {record.active ? "Aktiv" : "Inaktiv"}</Text>
-    </Stack>
-  );
+  const expansionContent = (record: DemoItem, isMobile = false) => {
+    const all = subEntries(record);
+    const entries = enableSubFilter && subCategoryFilter.length
+      ? all.filter((e) => subCategoryFilter.includes(e.category))
+      : all;
+    const totalDebit = entries.reduce((sum, e) => sum + e.debit, 0);
+    const totalCredit = entries.reduce((sum, e) => sum + e.credit, 0);
+    const finalBalance = entries.length ? entries[entries.length - 1].balance : 0;
+
+    const columns: SubTableColumn<SubEntry>[] = [
+      {
+        accessor: "date",
+        title: "Datum",
+        render: (e) => new Date(e.date).toLocaleDateString("de-DE"),
+        footer: <Text fw={600} fz="sm">Summe</Text>,
+      },
+      {
+        accessor: "description",
+        title: "Beschreibung",
+        hideOnMobile: (e) => !e.description,
+      },
+      {
+        accessor: "category",
+        title: "Kategorie",
+        render: (e) => <Badge size="xs" variant="light">{e.category}</Badge>,
+        ...(enableSubFilter && {
+          filter: ({ close }: { close: () => void }) => (
+            <Stack>
+              <Checkbox.Group value={subCategoryFilter} onChange={setSubCategoryFilter}>
+                <Stack gap="xs">
+                  <Checkbox value="Lastschrift" label="Lastschrift" />
+                  <Checkbox value="Gutschrift" label="Gutschrift" />
+                </Stack>
+              </Checkbox.Group>
+              <Button variant="light" disabled={!subCategoryFilter.length} onClick={() => { setSubCategoryFilter([]); close(); }}>
+                Zurücksetzen
+              </Button>
+            </Stack>
+          ),
+          filtering: subCategoryFilter.length > 0,
+        }),
+      },
+      {
+        accessor: "debit",
+        title: "Soll",
+        textAlign: "right",
+        render: (e) => (e.debit ? eur(e.debit) : "–"),
+        hideOnMobile: (e) => !e.debit,
+        footer: <Text fw={600} fz="sm">{eur(totalDebit)}</Text>,
+      },
+      {
+        accessor: "credit",
+        title: "Haben",
+        textAlign: "right",
+        render: (e) => (e.credit ? eur(e.credit) : "–"),
+        hideOnMobile: (e) => !e.credit,
+        footer: <Text fw={600} fz="sm">{eur(totalCredit)}</Text>,
+      },
+      {
+        accessor: "balance",
+        title: "Saldo",
+        textAlign: "right",
+        render: (e) => eur(e.balance),
+        footer: <Text fw={600} fz="sm">{eur(finalBalance)}</Text>,
+      },
+    ];
+
+    return (
+      <SubTable
+        mobile={isMobile}
+        columns={columns}
+        records={entries}
+        idAccessor="id"
+        withTableBorder={false}
+        verticalSpacing="xs"
+        minHeight={0}
+        noRecordsText="Keine Buchungen"
+      />
+    );
+  };
 
   const sharedProps = {
     ...(enableSort && {
@@ -179,14 +332,20 @@ export default function App() {
       onRowClick: ({ record }: { record: DemoItem }) => alert(`Clicked: ${record.name}`),
     }),
     ...(enableRowExpansion && {
-      rowExpansion: { content: expansionContent },
+      rowExpansion: {
+        content: expansionContent,
+        expanded: { recordIds: expandedIds, onRecordIdsChange: setExpandedIds },
+        ...(enableConditionalExpansion && {
+          expandable: (record: DemoItem) => subEntries(record).length > 0,
+        }),
+      },
     }),
   };
 
   return (
     <MantineProvider>
       <Container size="sm" py="xl">
-        <Title order={3} mb="md">MobileCardList Demo</Title>
+        <Title order={3} mb="md">MobileCardList & SubTable Demo</Title>
 
         <Group gap="lg" mb="md" wrap="wrap">
           <Switch label="mobileCards" checked={enableMobileCards} onChange={(e) => setEnableMobileCards(e.currentTarget.checked)} />
@@ -196,8 +355,9 @@ export default function App() {
           <Switch label="Tabs" checked={enableTabs} onChange={(e) => setEnableTabs(e.currentTarget.checked)} />
           <Switch label="Filter (Suche)" checked={enableFilter} onChange={(e) => setEnableFilter(e.currentTarget.checked)} />
           <Switch label="Column Filter" checked={enableColumnFilter} onChange={(e) => setEnableColumnFilter(e.currentTarget.checked)} />
-          <Switch label="Row Expansion" checked={enableRowExpansion} onChange={(e) => setEnableRowExpansion(e.currentTarget.checked)} />
-          <Switch label="Conditional Expansion (nur Admin-Tab)" checked={enableConditionalExpansion} onChange={(e) => setEnableConditionalExpansion(e.currentTarget.checked)} />
+          <Switch label="Row Expansion (SubTable)" checked={enableRowExpansion} onChange={(e) => setEnableRowExpansion(e.currentTarget.checked)} />
+          <Switch label="SubTable Filter (Kategorie)" checked={enableSubFilter} onChange={(e) => setEnableSubFilter(e.currentTarget.checked)} />
+          <Switch label="Conditional Expansion (nur Zeilen mit Buchungen)" checked={enableConditionalExpansion} onChange={(e) => setEnableConditionalExpansion(e.currentTarget.checked)} />
           <Switch label="Card Actions" checked={enableCardActions} onChange={(e) => setEnableCardActions(e.currentTarget.checked)} />
           <Switch label="onRowClick" checked={enableOnRowClick} onChange={(e) => setEnableOnRowClick(e.currentTarget.checked)} />
         </Group>
@@ -265,13 +425,13 @@ export default function App() {
               })}
               {...(enableRowExpansion && {
                 rowExpansion: {
-                  content: ({ record }: { record: DemoItem }) => expansionContent(record),
-                },
-              })}
-              {...(enableConditionalExpansion && activeTab === "Admin" && {
-                rowExpansion: {
                   allowMultiple: true,
+                  trigger: enableOnRowClick ? "never" : "click",
                   content: ({ record }: { record: DemoItem }) => expansionContent(record),
+                  expanded: { recordIds: expandedIds, onRecordIdsChange: setExpandedIds },
+                  ...(enableConditionalExpansion && {
+                    expandable: ({ record }: { record: DemoItem }) => subEntries(record).length > 0,
+                  }),
                 },
               })}
               {...(enableOnRowClick && {

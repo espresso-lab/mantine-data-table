@@ -1,8 +1,9 @@
 import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Menu, Pagination, Popover, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
-import { Action, Field } from "./DataTableInner";
+import { Action, Field } from "./DataTable";
 import React, { useState } from "react";
 import { IconDotsVertical, IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+import { FieldCardRows, FieldRow } from "./FieldCard";
 
 interface SortConfig {
   field: string;
@@ -27,6 +28,7 @@ interface MobileCardListProps<T extends BaseEntity> {
   };
   sort?: SortConfig;
   rowExpansion?: {
+    expandable?: (record: T) => boolean;
     content: (record: T, isMobile: boolean) => React.ReactNode;
     expanded?: {
       recordIds: unknown[];
@@ -63,19 +65,6 @@ function renderFieldValue<T extends BaseEntity>(record: T, field: Field<T>): Rea
   }
 
   return <Text fz="sm">{String(value)}</Text>;
-}
-
-function MobileCardRow<T extends BaseEntity>({ field, record }: { field: Field<T>; record: T }) {
-  return (
-    <Group wrap="nowrap" justify="space-between" align="center" py="xs" px="sm">
-      <Text fw={700} fz="sm">
-        {(field.column.title as string) ?? field.id}
-      </Text>
-      <Box ta="right" fz="sm">
-        {renderFieldValue(record, field)}
-      </Box>
-    </Group>
-  );
 }
 
 export function MobileCardList<T extends BaseEntity>({
@@ -202,7 +191,8 @@ export function MobileCardList<T extends BaseEntity>({
 
       {records.map((record, index) => {
         const recordKey = record.id ?? index;
-        const expanded = isExpanded(recordKey);
+        const canExpand = !!rowExpansion && (!rowExpansion.expandable || rowExpansion.expandable(record));
+        const expanded = canExpand && isExpanded(recordKey);
 
         return (
           <React.Fragment key={recordKey}>
@@ -216,9 +206,9 @@ export function MobileCardList<T extends BaseEntity>({
             >
               <Box
                 w="100%"
-                style={{ cursor: onRowClick || rowExpansion ? "pointer" : "default" }}
+                style={{ cursor: onRowClick || canExpand ? "pointer" : "default" }}
                 onClick={(e: React.MouseEvent) => {
-                  if (rowExpansion && !onRowClick) {
+                  if (canExpand && !onRowClick) {
                     toggleExpansion(recordKey);
                   } else {
                     handleCardClick(record, index, e);
@@ -265,18 +255,18 @@ export function MobileCardList<T extends BaseEntity>({
                     })()}
                   </Group>
                 )}
-                {listFields.map((field, fieldIndex) => (
-                  <React.Fragment key={field.id}>
-                    {fieldIndex > 0 && <Divider />}
-                    <MobileCardRow field={field} record={record} />
-                  </React.Fragment>
-                ))}
+                <FieldCardRows
+                  rows={listFields.map<FieldRow>((field) => ({
+                    label: (field.column.title as React.ReactNode) ?? field.id,
+                    value: renderFieldValue(record, field),
+                  }))}
+                />
               </Box>
-              {rowExpansion && (
+              {canExpand && (
                 <Collapse expanded={expanded}>
                   <Divider />
                   <Box px="sm" py="sm">
-                    {rowExpansion.content(record, true)}
+                    {rowExpansion!.content(record, true)}
                   </Box>
                 </Collapse>
               )}

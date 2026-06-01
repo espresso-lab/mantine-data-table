@@ -45,6 +45,8 @@ export interface BaseEntity {
 
 type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
+const toKey = (queryKey: Array<string | number>): string[] => queryKey.map((k) => k.toString());
+
 export async function getAll<T extends BaseEntity>(
   path: string,
   getHeaders: GetHeaders,
@@ -120,7 +122,7 @@ export function useGetOne<T extends BaseEntity>(
 ) {
   const { baseUrl, getHeaders } = useDataTable();
   return useQuery<T>({
-    queryKey: [...queryKey.map((k) => k.toString()), String(id?.toString())],
+    queryKey: [...toKey(queryKey), String(id?.toString())],
     queryFn: () => getOne<T>(`${baseUrl}${apiPath}`, id!, getHeaders),
     enabled: !!id,
   });
@@ -133,7 +135,7 @@ export function useGetAll<T extends BaseEntity>(
 ) {
   const { baseUrl, getHeaders } = useDataTable();
   return useQuery<T[]>({
-    queryKey: [...queryKey.map((k) => k.toString())],
+    queryKey: toKey(queryKey),
     queryFn: () => getAll<T>(`${baseUrl}${apiPath}`, getHeaders),
     enabled,
   });
@@ -145,12 +147,12 @@ export function useAddOne<T extends BaseEntity>(
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, Omit<T, "id">>({
-    mutationKey: [...queryKey.map((k) => k.toString())],
+    mutationKey: toKey(queryKey),
     mutationFn: (item) =>
       createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())]
+        queryKey: toKey(queryKey)
       });
     },
   });
@@ -162,12 +164,12 @@ export function useUpdateOne<T extends BaseEntity>(
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, AtLeast<T, "id">>({
-    mutationKey: [...queryKey.map((k) => k.toString())],
+    mutationKey: toKey(queryKey),
     mutationFn: (item) =>
       updateOne<T>(`${baseUrl}${apiPath}`, item, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())]
+        queryKey: toKey(queryKey)
       });
     },
   });
@@ -179,11 +181,11 @@ export function useDeleteOne(
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<void, Error, string | number>({
-    mutationKey: [...queryKey.map((k) => k.toString())],
+    mutationKey: toKey(queryKey),
     mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id, getHeaders),
     onSettled() {
       return queryClient.invalidateQueries({
-        queryKey: [...queryKey.map((k) => k.toString())]
+        queryKey: toKey(queryKey)
       });
     },
   });

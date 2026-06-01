@@ -3,19 +3,25 @@ import { useState } from "react";
 export function usePersistentState<T>(
   initialValue: T,
   key: string,
-): [T, (value: T) => void] {
+): [T, (value: T | ((prev: T) => T)) => void] {
+  const storageKey = `use_persistent_storage_${key}`;
+
   const [state, setState] = useState<T>(() => {
-    const storedValue = localStorage.getItem(`use_persistent_storage_${key}`);
-    return storedValue ? (JSON.parse(storedValue) as T) : initialValue;
+    try {
+      const storedValue = localStorage.getItem(storageKey);
+      return storedValue ? (JSON.parse(storedValue) as T) : initialValue;
+    } catch {
+      return initialValue;
+    }
   });
 
-  const setStateWrapper = (newState: T) => {
-    setState(newState);
-    localStorage.setItem(
-      `use_persistent_storage_${key}`,
-      JSON.stringify(newState),
-    );
+  const setPersistentState = (value: T | ((prev: T) => T)) => {
+    setState((prev) => {
+      const next = value instanceof Function ? value(prev) : value;
+      localStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
   };
 
-  return [state, setStateWrapper];
+  return [state, setPersistentState];
 }
