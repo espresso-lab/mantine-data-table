@@ -22,21 +22,16 @@ export function CreateModal<T extends BaseEntity>({
 }: CreateModalProps<T>) {
   const [recordId, setRecordId] = useState<string | number>();
 
-  const { mutateAsync: create, isPending: isCreating, error } = useAddOne<T>(apiPath, queryKey);
-  const { mutateAsync: update, isPending: isUpdating } = useUpdateOne<T>(apiPath, queryKey);
+  const { mutateAsync: create, isPending: isCreating, error: createError } = useAddOne<T>(apiPath, queryKey);
+  const { mutateAsync: update, isPending: isUpdating, error: updateError } = useUpdateOne<T>(apiPath, queryKey);
 
-  const persist = async (values: T): Promise<boolean> => {
-    try {
-      if (recordId != null) {
-        await update({ ...values, id: recordId });
-      } else {
-        const created = await create(values);
-        setRecordId(created.id);
-        onCreated?.(created.id);
-      }
-      return true;
-    } catch {
-      return false;
+  const persist = async (values: T) => {
+    if (recordId != null) {
+      await update({ ...values, id: recordId });
+    } else {
+      const created = await create(values);
+      setRecordId(created.id);
+      onCreated?.(created.id);
     }
   };
 
@@ -46,7 +41,7 @@ export function CreateModal<T extends BaseEntity>({
       steps={steps}
       recordId={recordId}
       submitting={isCreating || isUpdating}
-      error={error}
+      error={createError ?? updateError}
       onPersist={persist}
       onClose={onClose}
     />

@@ -38,13 +38,8 @@ export function UpdateModal<T extends BaseEntity>({
     );
   }
 
-  const persist = async (values: T): Promise<boolean> => {
-    try {
-      await update({ ...values, id });
-      return true;
-    } catch {
-      return false;
-    }
+  const persist = async (values: T) => {
+    await update({ ...values, id });
   };
 
   return (

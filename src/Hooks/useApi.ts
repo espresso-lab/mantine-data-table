@@ -2,6 +2,27 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useDataTable } from "./useDataTable.ts";
 import type { GetHeaders } from "../Context/DataTableContext.tsx";
 
+export interface FieldViolation {
+  field: string;
+  message: string;
+}
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly violations?: FieldViolation[];
+
+  constructor(message: string, status: number, violations?: FieldViolation[]) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.violations = violations;
+  }
+}
+
+export function getFieldViolations(error: unknown): FieldViolation[] | undefined {
+  return error instanceof ApiError ? error.violations : undefined;
+}
+
 export function parseApiError(error: unknown): { message: string; code?: string; details?: unknown } {
   if (typeof error === "string") {
     try {
@@ -26,15 +47,24 @@ async function fetchWithError(url: string, init: RequestInit): Promise<Response>
   if (resp.status >= 400) {
     const responseText = await resp.text();
     if (!responseText) {
-      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      throw new ApiError(`HTTP ${resp.status}: ${resp.statusText}`, resp.status);
     }
-    let errorJson: { message?: string; error?: string } | null = null;
+    let errorJson: { message?: string; error?: string; title?: string; violations?: FieldViolation[] } | null = null;
     try {
       errorJson = JSON.parse(responseText);
     } catch {
-      throw new Error(responseText);
+      throw new ApiError(responseText, resp.status);
     }
-    throw new Error(errorJson?.message ?? errorJson?.error ?? responseText);
+    const violations = Array.isArray(errorJson?.violations)
+      ? errorJson.violations
+          .filter((v) => v?.field && v?.message)
+          .map((v) => ({ field: String(v.field), message: String(v.message) }))
+      : undefined;
+    throw new ApiError(
+      errorJson?.message ?? errorJson?.error ?? errorJson?.title ?? responseText,
+      resp.status,
+      violations,
+    );
   }
   return resp;
 }

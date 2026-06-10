@@ -4,7 +4,7 @@ import { useForm } from "@mantine/form";
 // @ts-expect-error - FormRule not publicly exported from @mantine/form
 import type { FormRule } from "@mantine/form/lib/types";
 import { Fragment, useEffect, useState } from "react";
-import { BaseEntity } from "../Hooks/useApi";
+import { BaseEntity, getFieldViolations } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTable.tsx";
 
 function resolveRequired<T>(field: Field<T>, values: Partial<T>): boolean {
@@ -58,6 +58,23 @@ function normalizeLoadedValues<T>(data: T, fields: Field<T>[]): T {
   return values;
 }
 
+const violationFieldId = (path: string) => path.split(".").pop() ?? path;
+
+function mapFieldViolations(error: unknown, fieldIds: Set<string>): Record<string, string> {
+  return Object.fromEntries(
+    (getFieldViolations(error) ?? [])
+      .filter((violation) => fieldIds.has(violationFieldId(violation.field)))
+      .map((violation) => [violationFieldId(violation.field), violation.message]),
+  );
+}
+
+function resolveGeneralError(error: Error | null | undefined, fieldIds: Set<string>): string | undefined {
+  const violations = getFieldViolations(error);
+  if (!violations) return error?.message;
+  const unmapped = violations.filter((violation) => !fieldIds.has(violationFieldId(violation.field)));
+  return unmapped.length > 0 ? unmapped.map((violation) => violation.message).join(", ") : undefined;
+}
+
 export interface EntityFormProps<T extends BaseEntity> {
   fields: Field<T>[];
   steps?: StepConfig[];
@@ -65,7 +82,7 @@ export interface EntityFormProps<T extends BaseEntity> {
   recordId?: string | number;
   submitting: boolean;
   error?: Error | null;
-  onPersist: (values: T) => Promise<boolean>;
+  onPersist: (values: T) => Promise<void>;
   onClose: () => void;
 }
 
@@ -95,6 +112,9 @@ export function EntityForm<T extends BaseEntity>({
       form.setValues(values);
     }
   }, [record]);
+
+  const fieldIds = new Set(fields.map((f) => String(f.id)));
+  const generalError = resolveGeneralError(error, fieldIds);
 
   const stepsAvailable = [...new Set(fields.filter((f) => typeof f.step === "number").map((f) => f.step as number))];
   const hasSteps = stepsAvailable.length > 0;
@@ -134,16 +154,22 @@ export function EntityForm<T extends BaseEntity>({
 
   return (
     <>
-      {error?.message && (
-        <Alert variant="outline" color="red" title={error.name ?? "Fehler aufgetreten"} mb="lg">
-          {error.message}
+      {generalError && (
+        <Alert variant="outline" color="red" title="Fehler aufgetreten" mb="lg">
+          {generalError}
         </Alert>
       )}
 
       <form
         onSubmit={form.onSubmit(async (raw) => {
           const values = cleanValues(raw as T);
-          if (!(await onPersist(values))) return;
+          try {
+            await onPersist(values);
+          } catch (submitError) {
+            const fieldErrors = mapFieldViolations(submitError, fieldIds);
+            if (Object.keys(fieldErrors).length > 0) form.setErrors(fieldErrors);
+            return;
+          }
           if (hasSteps && !isLastStep) {
             setActive((current) => current + 1);
           } else {
