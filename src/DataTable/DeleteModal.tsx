@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useState } from "react";
 export interface DeleteModalProps<T> {
   onClose: () => void;
   queryKey: (string | number)[];
+  connectedQueryKeys?: (string | number)[][];
   apiPath: string;
   selectedRecords: T[];
   confirmMessage?: (records: T[]) => ReactNode;
@@ -12,6 +13,7 @@ export interface DeleteModalProps<T> {
 
 export function DeleteModal<T extends BaseEntity>({
   queryKey,
+  connectedQueryKeys,
   apiPath,
   onClose,
   selectedRecords,
@@ -22,7 +24,7 @@ export function DeleteModal<T extends BaseEntity>({
     isError: isDeleteError,
     error: deleteError,
     isPending: isDeletePending,
-  } = useDeleteOne(apiPath, queryKey);
+  } = useDeleteOne(apiPath, queryKey, connectedQueryKeys);
 
   const [records, setRecords] = useState<T[]>(selectedRecords);
   const [isDeleting, setIsDeleting] = useState(false);

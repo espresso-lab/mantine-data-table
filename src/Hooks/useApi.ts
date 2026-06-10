@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useDataTable } from "./useDataTable.ts";
 import type { GetHeaders } from "../Context/DataTableContext.tsx";
 
@@ -21,25 +21,6 @@ export class ApiError extends Error {
 
 export function getFieldViolations(error: unknown): FieldViolation[] | undefined {
   return error instanceof ApiError ? error.violations : undefined;
-}
-
-export function parseApiError(error: unknown): { message: string; code?: string; details?: unknown } {
-  if (typeof error === "string") {
-    try {
-      const parsed = JSON.parse(error);
-      return {
-        message: parsed.message || error,
-        code: parsed.code,
-        details: parsed.details,
-      };
-    } catch {
-      return { message: error };
-    }
-  }
-  if (error instanceof Error) {
-    return { message: error.message };
-  }
-  return { message: "Unbekannter Fehler" };
 }
 
 async function fetchWithError(url: string, init: RequestInit): Promise<Response> {
@@ -171,52 +152,56 @@ export function useGetAll<T extends BaseEntity>(
   });
 }
 
+function invalidateAfterMutation(
+  queryClient: QueryClient,
+  queryKey: Array<string | number>,
+  connectedQueryKeys?: Array<Array<string | number>>,
+) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: toKey(queryKey) }),
+    ...(connectedQueryKeys ?? []).map((connectedQueryKey) =>
+      queryClient.invalidateQueries({ queryKey: connectedQueryKey }),
+    ),
+  ]);
+}
+
 export function useAddOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
+  connectedQueryKeys?: Array<Array<string | number>>,
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, Omit<T, "id">>({
     mutationKey: toKey(queryKey),
     mutationFn: (item) =>
       createOne<Omit<T, "id">, T>(`${baseUrl}${apiPath}`, item, getHeaders),
-    onSettled() {
-      return queryClient.invalidateQueries({
-        queryKey: toKey(queryKey)
-      });
-    },
+    onSettled: () => invalidateAfterMutation(queryClient, queryKey, connectedQueryKeys),
   });
 }
 
 export function useUpdateOne<T extends BaseEntity>(
   apiPath: string,
   queryKey: Array<string | number>,
+  connectedQueryKeys?: Array<Array<string | number>>,
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<T, Error, AtLeast<T, "id">>({
     mutationKey: toKey(queryKey),
     mutationFn: (item) =>
       updateOne<T>(`${baseUrl}${apiPath}`, item, getHeaders),
-    onSettled() {
-      return queryClient.invalidateQueries({
-        queryKey: toKey(queryKey)
-      });
-    },
+    onSettled: () => invalidateAfterMutation(queryClient, queryKey, connectedQueryKeys),
   });
 }
 
 export function useDeleteOne(
   apiPath: string,
   queryKey: Array<string | number>,
+  connectedQueryKeys?: Array<Array<string | number>>,
 ) {
   const { baseUrl, queryClient, getHeaders } = useDataTable();
   return useMutation<void, Error, string | number>({
     mutationKey: toKey(queryKey),
     mutationFn: (id) => deleteOne(`${baseUrl}${apiPath}`, id, getHeaders),
-    onSettled() {
-      return queryClient.invalidateQueries({
-        queryKey: toKey(queryKey)
-      });
-    },
+    onSettled: () => invalidateAfterMutation(queryClient, queryKey, connectedQueryKeys),
   });
 }

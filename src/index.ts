@@ -1,6 +1,5 @@
 export type { BaseEntity } from "./Hooks/useApi";
 export {
-  parseApiError,
   api,
   useGetOne,
   useDeleteOne,

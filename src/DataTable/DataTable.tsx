@@ -6,7 +6,6 @@ import { IconCaretDownFilled, IconChevronRight, IconInfoCircle, IconPencil, Icon
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
-import { useDataTable } from "../Hooks/useDataTable.ts";
 import { usePersistentState } from "../Hooks/usePersistentState.ts";
 import { sortData } from "../utils/sort";
 import { applyFilters, Filter } from "../utils/filter";
@@ -180,16 +179,6 @@ export function DataTable<T extends BaseEntity>({
     isRefetching,
     refetch,
   } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
-
-  const { queryClient } = useDataTable();
-
-  useEffect(() => {
-    if (!allData || !Array.isArray(allData)) return;
-
-    connectedQueryKeys?.forEach((connectedQueryKey) =>
-      queryClient.invalidateQueries({ queryKey: connectedQueryKey }),
-    );
-  }, [allData, connectedQueryKeys, queryClient]);
 
   const filteredData = applyFilters(Array.isArray(allData) ? allData : [], filters);
 
@@ -563,6 +552,7 @@ export function DataTable<T extends BaseEntity>({
           <UpdateModal<T>
             fields={fields.filter((field) => field.update)}
             queryKey={queryKey}
+            connectedQueryKeys={connectedQueryKeys}
             apiPath={effectiveMutationApiPath}
             id={selectedRecords[0].id}
             onClose={() => {
@@ -589,6 +579,7 @@ export function DataTable<T extends BaseEntity>({
               setSelectedRecords([]);
             }}
             queryKey={queryKey}
+            connectedQueryKeys={connectedQueryKeys}
             apiPath={effectiveMutationApiPath}
             selectedRecords={selectedRecords}
             confirmMessage={deleteConfirmMessage}
@@ -605,6 +596,7 @@ export function DataTable<T extends BaseEntity>({
       >
         <CreateModal<T>
           queryKey={queryKey}
+          connectedQueryKeys={connectedQueryKeys}
           apiPath={effectiveMutationApiPath}
           onClose={() => {
             setCreateModalOpen(false);

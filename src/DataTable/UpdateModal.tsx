@@ -8,6 +8,7 @@ export interface UpdateModalProps<T> {
   steps?: StepConfig[];
   onClose: () => void;
   queryKey: (string | number)[];
+  connectedQueryKeys?: (string | number)[][];
   apiPath: string;
   id: string | number;
 }
@@ -16,12 +17,13 @@ export function UpdateModal<T extends BaseEntity>({
   fields,
   onClose,
   queryKey,
+  connectedQueryKeys,
   apiPath,
   id,
   steps,
 }: UpdateModalProps<T>) {
   const { data, isLoading } = useGetOne<T>(apiPath, queryKey, id);
-  const { mutateAsync: update, isPending, error } = useUpdateOne<T>(apiPath, queryKey);
+  const { mutateAsync: update, isPending, error } = useUpdateOne<T>(apiPath, queryKey, connectedQueryKeys);
 
   if (isLoading || !data) {
     return (

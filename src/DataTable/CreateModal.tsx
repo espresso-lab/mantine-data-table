@@ -7,6 +7,7 @@ export interface CreateModalProps<T> {
   fields: Field<T>[];
   onClose: () => void;
   queryKey: (string | number)[];
+  connectedQueryKeys?: (string | number)[][];
   apiPath: string;
   steps?: StepConfig[];
   onCreated?: (id: string | number) => void;
@@ -16,14 +17,15 @@ export function CreateModal<T extends BaseEntity>({
   fields,
   onClose,
   queryKey,
+  connectedQueryKeys,
   apiPath,
   steps,
   onCreated,
 }: CreateModalProps<T>) {
   const [recordId, setRecordId] = useState<string | number>();
 
-  const { mutateAsync: create, isPending: isCreating, error: createError } = useAddOne<T>(apiPath, queryKey);
-  const { mutateAsync: update, isPending: isUpdating, error: updateError } = useUpdateOne<T>(apiPath, queryKey);
+  const { mutateAsync: create, isPending: isCreating, error: createError } = useAddOne<T>(apiPath, queryKey, connectedQueryKeys);
+  const { mutateAsync: update, isPending: isUpdating, error: updateError } = useUpdateOne<T>(apiPath, queryKey, connectedQueryKeys);
 
   const persist = async (values: T) => {
     if (recordId != null) {
