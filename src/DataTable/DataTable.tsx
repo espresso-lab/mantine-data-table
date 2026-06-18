@@ -1,6 +1,6 @@
 import { ActionIcon, Alert, Box, Button, Flex, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
 import { IconCaretDownFilled, IconChevronRight, IconInfoCircle, IconPencil, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
@@ -277,15 +277,20 @@ export function DataTable<T extends BaseEntity>({
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  const handledEditRecordId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (editRecordId && sortedData.length > 0) {
-      const record = sortedData.find((r) => r.id === editRecordId);
-      if (record) {
-        setSelectedRecords([record]);
-        setUpdateModalOpen(true);
-        onEditRecordIdChange?.(null);
-      }
+    if (!editRecordId) {
+      handledEditRecordId.current = null;
+      return;
     }
+    if (handledEditRecordId.current === editRecordId) return;
+    const record = sortedData.find((r) => r.id === editRecordId);
+    if (!record) return;
+    handledEditRecordId.current = editRecordId;
+    setSelectedRecords([record]);
+    setUpdateModalOpen(true);
+    onEditRecordIdChange?.(null);
   }, [editRecordId, sortedData]);
 
   const hasUpdateField = fields.some((field) => field.update);
