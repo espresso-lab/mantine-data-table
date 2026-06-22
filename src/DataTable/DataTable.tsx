@@ -91,6 +91,8 @@ export interface DataTableProps<T extends BaseEntity> {
   canUpdate?: (record: T) => boolean;
   canDelete?: (record: T) => boolean;
   showRefresh?: boolean;
+  onRefresh?: () => void | Promise<unknown>;
+  autoPoll?: number | ((records: T[]) => number | false);
   rowExpansion?: {
     allowMultiple?: boolean;
     expandable?: (record: T) => boolean;
@@ -133,6 +135,8 @@ export function DataTable<T extends BaseEntity>({
   canUpdate,
   canDelete,
   showRefresh = true,
+  onRefresh,
+  autoPoll,
   rowExpansion,
   onRowClick,
   mobileCards = false,
@@ -181,6 +185,23 @@ export function DataTable<T extends BaseEntity>({
   } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
 
   const filteredData = applyFilters(Array.isArray(allData) ? allData : [], filters);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshRef = useRef<() => void | Promise<unknown>>(() => {});
+  useEffect(() => {
+    refreshRef.current = onRefresh ?? (() => refetch());
+  });
+  const pollInterval =
+    typeof autoPoll === "function"
+      ? autoPoll(Array.isArray(allData) ? allData : [])
+      : (autoPoll ?? false);
+  useEffect(() => {
+    if (!pollInterval) return;
+    const id = setInterval(() => {
+      Promise.resolve(refreshRef.current()).catch(() => {});
+    }, pollInterval);
+    return () => clearInterval(id);
+  }, [pollInterval]);
 
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
@@ -347,7 +368,19 @@ export function DataTable<T extends BaseEntity>({
           {showRefresh && (
             <ActionIcon
               variant="subtle"
-              onClick={() => refetch()}
+              loading={isRefreshing}
+              onClick={async () => {
+                if (onRefresh) {
+                  setIsRefreshing(true);
+                  try {
+                    await onRefresh();
+                  } finally {
+                    setIsRefreshing(false);
+                  }
+                } else {
+                  refetch();
+                }
+              }}
               aria-label="Neuladen"
             >
               <IconRefresh />
