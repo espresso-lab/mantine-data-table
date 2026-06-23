@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Box, Button, Flex, Group, Menu, Modal, Skeleton, Stack, Tabs, Title } from "@mantine/core";
+import { ActionIcon, Alert, Box, Button, Flex, Group, HoverCard, Menu, Modal, Skeleton, Stack, Tabs, Text, Title } from "@mantine/core";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
@@ -66,6 +66,7 @@ export interface StepConfig {
 
 export interface DataTableProps<T extends BaseEntity> {
   title?: string | React.ReactNode;
+  titleHint?: React.ReactNode;
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
@@ -113,6 +114,7 @@ const PAGE_SIZES = [10, 15, 50, 100, 500];
 
 export function DataTable<T extends BaseEntity>({
   title,
+  titleHint,
   queryKey,
   connectedQueryKeys,
   apiPath,
@@ -351,12 +353,38 @@ export function DataTable<T extends BaseEntity>({
         justify={title ? "space-between" : "flex-end"}
         wrap="wrap"
       >
-        {title &&
-          (typeof title === "string" ? (
-            <Title order={4}>{title}</Title>
-          ) : (
-            title
-          ))}
+        {title && (
+          <Group gap={6} align="center" wrap="nowrap">
+            {typeof title === "string" ? <Title order={4}>{title}</Title> : title}
+            {titleHint != null && (
+              <HoverCard
+                width={340}
+                shadow="md"
+                withArrow
+                openDelay={120}
+                closeDelay={160}
+                position="top-start"
+              >
+                <HoverCard.Target>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    radius="xl"
+                    aria-label="Mehr Informationen"
+                  >
+                    <IconInfoCircle size={16} />
+                  </ActionIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text component="div" size="sm" c="dimmed">
+                    {titleHint}
+                  </Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+          </Group>
+        )}
         <Flex
           align={{ base: "stretch", sm: "center" }}
           direction={{ base: "column", sm: "row" }}
