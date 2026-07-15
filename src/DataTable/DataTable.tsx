@@ -74,6 +74,7 @@ export interface DataTableProps<T extends BaseEntity> {
   queryParams?: Record<string, string | number | boolean | null>;
   filters?: Filter[];
   buttons?: React.ReactNode[];
+  topContent?: React.ReactNode;
   createButtonText?: string;
   actions?: Action<T>[];
   selection?: boolean;
@@ -120,6 +121,7 @@ export function DataTable<T extends BaseEntity>({
   apiPath,
   mutationApiPath,
   buttons,
+  topContent,
   fields,
   selection,
   pagination,
@@ -479,6 +481,8 @@ export function DataTable<T extends BaseEntity>({
           {buttons}
         </Flex>
       </Flex>
+
+      {topContent}
 
       {tabs && tabs.length > 0 && (
         <Tabs value={activeTab} onChange={handleTabChange} mt="md">
