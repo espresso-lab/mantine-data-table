@@ -530,8 +530,11 @@ export function DataTable<T extends BaseEntity>({
             {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
             <MantineDataTable
               my="md"
-              striped
+              withTableBorder
+              borderRadius="md"
               highlightOnHover
+              verticalSpacing="sm"
+              horizontalSpacing="md"
               minHeight={150}
               fetching={isError}
               records={records}
