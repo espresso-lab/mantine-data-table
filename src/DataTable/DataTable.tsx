@@ -558,7 +558,9 @@ export function DataTable<T extends BaseEntity>({
                 rowExpansion: {
                   allowMultiple: rowExpansion.allowMultiple ?? false,
                   trigger: onRowClick ? "never" : "click",
-                  content: ({ record }: { record: T }) => rowExpansion.content(record, false),
+                  content: ({ record }: { record: T }) => (
+                    <Box bg="var(--mantine-color-body)">{rowExpansion.content(record, false)}</Box>
+                  ),
                   expanded: { recordIds: expandedRecordIds, onRecordIdsChange: handleExpandedRecordIdsChange },
                   ...(rowExpansion.expandable && {
                     expandable: ({ record }: { record: T }) => rowExpansion.expandable!(record),
