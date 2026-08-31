@@ -231,7 +231,17 @@ export function DataTable<T extends BaseEntity>({
   );
   const [page, setPage] = useState(1);
 
-  const records = pagination ? sortedData.slice((page - 1) * pageSize, page * pageSize) : sortedData;
+  const pageCount = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+
+  const handleRecordsPerPageChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const records = pagination
+    ? sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : sortedData;
 
   const [internalExpandedIds, setInternalExpandedIds] = useState<unknown[]>([]);
   const expandedRecordIds = rowExpansion?.expanded?.recordIds ?? internalExpandedIds;
@@ -545,13 +555,13 @@ export function DataTable<T extends BaseEntity>({
                 onSelectedRecordsChange: setSelectedRecords,
               })}
               {...(pagination &&
-                records.length && {
+                sortedData.length && {
                   totalRecords: sortedData.length,
                   recordsPerPage: pageSize,
                   onPageChange: setPage,
-                  page,
+                  page: currentPage,
                   recordsPerPageOptions: PAGE_SIZES,
-                  onRecordsPerPageChange: setPageSize,
+                  onRecordsPerPageChange: handleRecordsPerPageChange,
                   recordsPerPageLabel: "Einträge pro Seite",
                 })}
               {...(rowExpansion && {
@@ -587,14 +597,14 @@ export function DataTable<T extends BaseEntity>({
                     handleSortChange({ columnAccessor: field as keyof T, direction });
                   },
                 }}
-                {...(pagination && records.length && {
+                {...(pagination && sortedData.length && {
                   pagination: {
                     totalRecords: sortedData.length,
                     recordsPerPage: pageSize,
-                    page,
+                    page: currentPage,
                     onPageChange: setPage,
                     recordsPerPageOptions: PAGE_SIZES,
-                    onRecordsPerPageChange: (size: number) => { setPageSize(size); setPage(1); },
+                    onRecordsPerPageChange: handleRecordsPerPageChange,
                   },
                 })}
                 {...(rowExpansion && {
