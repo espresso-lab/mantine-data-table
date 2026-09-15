@@ -7,6 +7,8 @@ import { Fragment, useEffect, useState } from "react";
 import { BaseEntity, getFieldViolations } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTable.tsx";
 
+const EMPTY_STRING_TYPES = new Set(["text", "textarea"]);
+
 function resolveRequired<T>(field: Field<T>, values: Partial<T>): boolean {
   return typeof field.required === "function" ? field.required(values) : !!field.required;
 }
@@ -37,9 +39,14 @@ function buildValidation<T>(fields: Field<T>[]) {
     );
 }
 
-function cleanValues<T>(rawValues: T): T {
+function cleanValues<T>(rawValues: T, fields: Field<T>[]): T {
+  const clearable = new Set(
+    fields.filter((field) => EMPTY_STRING_TYPES.has(field.type ?? "text")).map((field) => field.id),
+  );
   return Object.fromEntries(
-    Object.entries(rawValues as Record<string, unknown>).map(([key, value]) => [key, value === "" ? undefined : value]),
+    Object.entries(rawValues as Record<string, unknown>).map(([key, value]) =>
+      value === "" && !clearable.has(key) ? [key, undefined] : [key, value],
+    ),
   ) as T;
 }
 
@@ -52,7 +59,7 @@ function normalizeLoadedValues<T>(data: T, fields: Field<T>[]): T {
     } else if (field.type === "date" && values[key]) {
       values[key] = new Date(values[key] as unknown as string) as unknown as T[keyof T];
     } else if (values[key] === null) {
-      values[key] = "" as T[keyof T];
+      values[key] = (field.defaultValue ?? "") as T[keyof T];
     }
   });
   return values;
@@ -162,7 +169,7 @@ export function EntityForm<T extends BaseEntity>({
 
       <form
         onSubmit={form.onSubmit(async (raw) => {
-          const values = cleanValues(raw as T);
+          const values = cleanValues(raw as T, fields);
           try {
             await onPersist(values);
           } catch (submitError) {
