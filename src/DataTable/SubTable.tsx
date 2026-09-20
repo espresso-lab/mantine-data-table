@@ -19,6 +19,18 @@ export type SubTableProps<T> = Omit<MantineDataTableProps<T>, "columns"> & {
   columns: SubTableColumn<T>[];
 };
 
+function CellValue<T>({
+  render,
+  record,
+  index,
+}: {
+  render: NonNullable<DataTableColumn<T>["render"]>;
+  record: T;
+  index: number;
+}) {
+  return <>{render(record, index)}</>;
+}
+
 export function SubTable<T>({ mobile, columns, ...props }: SubTableProps<T>) {
   if (mobile) {
     const records = (props.records ?? []) as T[];
@@ -29,9 +41,11 @@ export function SubTable<T>({ mobile, columns, ...props }: SubTableProps<T>) {
             .filter((column) => !column.hidden && !column.hideOnMobile?.(record))
             .map((column) => ({
               label: column.title ?? humanize(String(column.accessor)),
-              value: column.render
-                ? column.render(record, index)
-                : (getValueAtPath(record, column.accessor) as React.ReactNode),
+              value: column.render ? (
+                <CellValue render={column.render} record={record} index={index} />
+              ) : (
+                (getValueAtPath(record, column.accessor) as React.ReactNode)
+              ),
             }));
           const key = props.idAccessor ? (getRecordId(record, props.idAccessor) as React.Key) : index;
           return <FieldCard key={key} rows={rows} />;
