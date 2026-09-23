@@ -19,16 +19,11 @@ export function DeleteModal<T extends BaseEntity>({
   selectedRecords,
   confirmMessage,
 }: DeleteModalProps<T>) {
-  const {
-    mutateAsync: del,
-    isError: isDeleteError,
-    error: deleteError,
-    isPending: isDeletePending,
-  } = useDeleteOne(apiPath, queryKey, connectedQueryKeys);
+  const { mutateAsync: del } = useDeleteOne(apiPath, queryKey, connectedQueryKeys);
 
   const [records, setRecords] = useState<T[]>(selectedRecords);
+  const [failures, setFailures] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const isLoading = isDeleting || isDeletePending;
 
   useEffect(() => {
     if (!records.length) {
@@ -42,9 +37,22 @@ export function DeleteModal<T extends BaseEntity>({
 
   return (
     <>
-      {isDeleteError && deleteError.message && (
-        <Alert variant="outline" color="red" title={deleteError.name}>
-          {deleteError.message}
+      {failures.length > 0 && (
+        <Alert
+          variant="outline"
+          color="red"
+          mb="sm"
+          title={
+            records.length === 1
+              ? "1 Eintrag wurde nicht gelöscht"
+              : `${records.length} Einträge wurden nicht gelöscht`
+          }
+        >
+          {failures.map((failure) => (
+            <Text key={failure} size="sm">
+              {failure}
+            </Text>
+          ))}
         </Alert>
       )}
 
@@ -56,20 +64,31 @@ export function DeleteModal<T extends BaseEntity>({
           : `Sollen ${records.length} Einträge wirklich gelöscht werden?`}
       </Text>
       <Group mt="md" justify="end">
-        <Button onClick={onClose} variant="outline" disabled={isLoading}>
+        <Button onClick={onClose} variant="outline" disabled={isDeleting}>
           Abbrechen
         </Button>
         <Button
           color="red"
-          loading={isLoading}
+          loading={isDeleting}
           onClick={async () => {
             setIsDeleting(true);
-            try {
-              await Promise.all(records.map((record) => del(record.id)));
-              setRecords([]);
-            } finally {
-              setIsDeleting(false);
-            }
+            const results = await Promise.allSettled(
+              records.map((record) => del(record.id)),
+            );
+            const reasons = results.flatMap((result) =>
+              result.status === "rejected" ? [result.reason] : [],
+            );
+            setRecords(
+              records.filter((_, index) => results[index].status === "rejected"),
+            );
+            setFailures([
+              ...new Set(
+                reasons.map((reason) =>
+                  reason instanceof Error ? reason.message : String(reason),
+                ),
+              ),
+            ]);
+            setIsDeleting(false);
           }}
         >
           Löschen
