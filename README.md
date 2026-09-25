@@ -107,6 +107,7 @@ A field describes both a table column and a form input.
 | --- | --- |
 | `id` | Unique key; used as the form field name and column accessor fallback. |
 | `list` / `create` / `update` / `delete` | Whether the field shows in the table, the create form, the edit form, and is editable. |
+| `inlineEdit` | Show a pencil in the cell; a click opens the edit modal for that row directly — same as selecting it and choosing *Bearbeiten* from the actions menu. Respects `canUpdate`. Default `false`. |
 | `type` | `text` (default), `number`, `date`, `boolean`, `textarea` or `custom`. |
 | `required` | `boolean` or `(values) => boolean`. |
 | `column` | A [mantine-datatable column](https://icflorescu.github.io/mantine-datatable/) — `accessor`, `title`, `render`, `sortable`, `textAlign`, `filter`, `footer`, `hidden`. |
@@ -117,7 +118,7 @@ A field describes both a table column and a form input.
 
 | Prop | Description |
 | --- | --- |
-| `selection` | Row checkboxes with bulk actions. |
+| `selection` | Row checkboxes with the *Aktionen* menu (edit, delete, custom `actions`); without it the menu is hidden. |
 | `pagination` | Client-side pagination. |
 | `mobileCards` | Render a card list instead of the table below the `sm` breakpoint. |
 | `tabs` | Switch between datasets, each with its own query params and api path. |

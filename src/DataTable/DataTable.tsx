@@ -28,6 +28,7 @@ export interface Field<T> {
   create: boolean;
   update: boolean;
   delete: boolean;
+  inlineEdit?: boolean;
   type?: FieldType;
   placeholder?: string;
   conditional?: (values: Partial<T>) => boolean;
@@ -112,6 +113,8 @@ export interface DataTableProps<T extends BaseEntity> {
 }
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
+
+const JUSTIFY_BY_ALIGN = { left: "flex-start", center: "center", right: "flex-end" } as const;
 
 export function DataTable<T extends BaseEntity>({
   title,
@@ -243,6 +246,65 @@ export function DataTable<T extends BaseEntity>({
     ? sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : sortedData;
 
+  const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
+
+  useEffect(() => {
+    setSelectedRecords([]);
+  }, [activeTab]);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const hasUpdateField = fields.some((field) => field.update);
+  const hasDeleteField = fields.some((field) => field.delete);
+
+  const openUpdateModal = (record: T) => {
+    setSelectedRecords([record]);
+    setUpdateModalOpen(true);
+  };
+
+  const inlineEditFields: Field<T>[] = hasUpdateField
+    ? fields.map((field) => {
+        if (!field.inlineEdit) return field;
+        const originalRender = field.column.render;
+        return {
+          ...field,
+          column: {
+            ...field.column,
+            render: (record: T, recordIndex: number) => {
+              const editable = canUpdate ? canUpdate(record) : true;
+              return (
+                <Group
+                  gap={4}
+                  wrap="nowrap"
+                  justify={JUSTIFY_BY_ALIGN[field.column.textAlign ?? "left"]}
+                  {...(editable && {
+                    onClick: (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      openUpdateModal(record);
+                    },
+                    style: { cursor: "pointer" },
+                  })}
+                >
+                  {editable ? (
+                    <ActionIcon size={16} variant="transparent" aria-label="Bearbeiten">
+                      <IconPencil size={16} />
+                    </ActionIcon>
+                  ) : (
+                    <Box w={16} style={{ flexShrink: 0 }} />
+                  )}
+                  {originalRender
+                    ? originalRender(record, recordIndex)
+                    : String(getValueAtPath(record, field.column.accessor) ?? "")}
+                </Group>
+              );
+            },
+          },
+        };
+      })
+    : fields;
+
   const [internalExpandedIds, setInternalExpandedIds] = useState<unknown[]>([]);
   const expandedRecordIds = rowExpansion?.expanded?.recordIds ?? internalExpandedIds;
   const handleExpandedRecordIdsChange = rowExpansion?.expanded?.onRecordIdsChange ?? setInternalExpandedIds;
@@ -258,7 +320,7 @@ export function DataTable<T extends BaseEntity>({
   const firstColumnIndex = fields.findIndex((field) => field.list && field.column && !field.column.hidden);
   const expansionFields: Field<T>[] =
     rowExpansion && firstColumnIndex >= 0
-      ? fields.map((field, index) => {
+      ? inlineEditFields.map((field, index) => {
           if (index !== firstColumnIndex) return field;
           const originalRender = field.column.render;
           return {
@@ -300,17 +362,7 @@ export function DataTable<T extends BaseEntity>({
             },
           };
         })
-      : fields;
-
-  const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
-
-  useEffect(() => {
-    setSelectedRecords([]);
-  }, [activeTab]);
-
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+      : inlineEditFields;
 
   const handledEditRecordId = useRef<string | null>(null);
 
@@ -327,9 +379,6 @@ export function DataTable<T extends BaseEntity>({
     setUpdateModalOpen(true);
     onEditRecordIdChange?.(null);
   }, [editRecordId, sortedData]);
-
-  const hasUpdateField = fields.some((field) => field.update);
-  const hasDeleteField = fields.some((field) => field.delete);
 
   const mobileActions: Action<T>[] = [];
   if (hasUpdateField) {
@@ -426,7 +475,7 @@ export function DataTable<T extends BaseEntity>({
               <IconRefresh />
             </ActionIcon>
           )}
-          {(fields.some((field) => field.update) || selection) && (() => {
+          {selection && (() => {
             const hasUpdateAction = fields.find((field) => field.update) && 
               (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0])));
             const hasDeleteAction = fields.find((field) => field.delete) && 

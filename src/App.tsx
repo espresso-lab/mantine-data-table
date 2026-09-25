@@ -5,7 +5,9 @@ import { DatePicker } from "@mantine/dates";
 import { Badge, Box, Button, Checkbox, Container, Divider, Group, MantineProvider, Stack, Switch, Tabs, Text, TextInput, Title } from "@mantine/core";
 import { MobileCardList } from "./DataTable/MobileCardList";
 import { SubTable, SubTableColumn } from "./DataTable/SubTable";
-import { Field } from "./DataTable/DataTable";
+import { DataTable, Field } from "./DataTable/DataTable";
+import { DataTableProvider } from "./Context/DataTableContext";
+import { QueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { sortData } from "./utils/sort";
 import { DataTable as MantineDataTable, DataTableSortStatus } from "mantine-datatable";
@@ -72,6 +74,28 @@ function subEntries(record: DemoItem): SubEntry[] {
   });
 }
 
+// DataTable fetches from an API, so the demo serves its records from an in-memory mock under /demo-api.
+const demoApiRecords: DemoItem[] = demoData.map((item) => ({ ...item }));
+
+const demoApiResponse = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+
+const browserFetch = window.fetch.bind(window);
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+  const match = url.pathname.match(/^\/demo-api\/users(?:\/(\d+))?$/);
+  if (!match) return browserFetch(input, init);
+  if (!match[1]) return demoApiResponse(demoApiRecords);
+  const record = demoApiRecords.find((item) => item.id === Number(match[1]));
+  if (!record) return demoApiResponse({ message: "Nicht gefunden" }, 404);
+  if (init?.method === "PUT") Object.assign(record, JSON.parse(String(init.body)));
+  return demoApiResponse(record);
+};
+
+const demoQueryClient = new QueryClient();
+
+const demoHeaders = async () => ({ "Content-Type": "application/json" });
+
 export default function App() {
   const [enableSelection, setEnableSelection] = useState(true);
   const [enableSort, setEnableSort] = useState(true);
@@ -85,6 +109,7 @@ export default function App() {
   const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null]);
   const [enableRowExpansion, setEnableRowExpansion] = useState(false);
   const [enableCardActions, setEnableCardActions] = useState(true);
+  const [enableInlineEdit, setEnableInlineEdit] = useState(true);
   const [enableConditionalExpansion, setEnableConditionalExpansion] = useState(false);
   const [enableSubFilter, setEnableSubFilter] = useState(false);
   const [subCategoryFilter, setSubCategoryFilter] = useState<string[]>([]);
@@ -204,6 +229,28 @@ export default function App() {
       },
     },
     { id: "active", list: true, create: false, update: false, delete: false, type: "boolean", column: { accessor: "active", title: "Aktiv" } },
+  ];
+
+  const dataTableFields: Field<DemoItem>[] = [
+    { id: "name", list: true, create: false, update: true, delete: false, required: true, column: { accessor: "name", title: "Name", sortable: true } },
+    { id: "email", list: true, create: false, update: true, delete: false, inlineEdit: enableInlineEdit, column: { accessor: "email", title: "E-Mail", sortable: true } },
+    {
+      id: "role",
+      list: true,
+      create: false,
+      update: true,
+      delete: false,
+      column: { accessor: "role", title: "Rolle", render: (record) => <Badge variant="light" size="sm">{record.role}</Badge> },
+    },
+    {
+      id: "active",
+      list: true,
+      create: false,
+      update: true,
+      delete: false,
+      type: "boolean",
+      column: { accessor: "active", title: "Aktiv", render: (record) => <Text fz="sm">{record.active ? "Ja" : "Nein"}</Text> },
+    },
   ];
 
   const tabFiltered = enableTabs && activeTab && activeTab !== "all"
@@ -360,6 +407,7 @@ export default function App() {
           <Switch label="Conditional Expansion (nur Zeilen mit Buchungen)" checked={enableConditionalExpansion} onChange={(e) => setEnableConditionalExpansion(e.currentTarget.checked)} />
           <Switch label="Card Actions" checked={enableCardActions} onChange={(e) => setEnableCardActions(e.currentTarget.checked)} />
           <Switch label="onRowClick" checked={enableOnRowClick} onChange={(e) => setEnableOnRowClick(e.currentTarget.checked)} />
+          <Switch label="inlineEdit (DataTable)" checked={enableInlineEdit} onChange={(e) => setEnableInlineEdit(e.currentTarget.checked)} />
         </Group>
 
         <Divider mb="md" />
@@ -441,6 +489,34 @@ export default function App() {
             />
           </Box>
         )}
+
+        <Divider my="xl" />
+
+        <DataTableProvider baseUrl="/demo-api" queryClient={demoQueryClient} getHeaders={demoHeaders}>
+          <DataTable<DemoItem>
+            title="DataTable"
+            titleHint="Mit DataTableProvider und Mock-API. Selection, Pagination, mobileCards, Row Expansion und onRowClick folgen den Schaltern oben; inlineEdit setzt den Stift in die E-Mail-Spalte."
+            queryKey={["demo-users"]}
+            apiPath="/users"
+            fields={dataTableFields}
+            defaultSort={{ field: "name", direction: "asc" }}
+            selection={enableSelection}
+            pagination={enablePagination}
+            mobileCards={enableMobileCards}
+            {...(enableOnRowClick && {
+              onRowClick: ({ record }: { record: DemoItem }) => alert(`Clicked: ${record.name}`),
+            })}
+            {...(enableRowExpansion && {
+              rowExpansion: {
+                allowMultiple: true,
+                content: expansionContent,
+                ...(enableConditionalExpansion && {
+                  expandable: (record: DemoItem) => subEntries(record).length > 0,
+                }),
+              },
+            })}
+          />
+        </DataTableProvider>
       </Container>
     </MantineProvider>
   );
