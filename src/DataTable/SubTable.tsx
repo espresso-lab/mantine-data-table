@@ -55,5 +55,5 @@ export function SubTable<T>({ mobile, columns, ...props }: SubTableProps<T>) {
   }
 
   // @ts-expect-error - DataTableProps is a discriminated union (columns vs groups) that does not survive Omit + spread
-  return <MantineDataTable backgroundColor="transparent" columns={columns} {...props} />;
+  return <MantineDataTable columns={columns} {...props} />;
 }
