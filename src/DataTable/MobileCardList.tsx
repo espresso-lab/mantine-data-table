@@ -122,7 +122,7 @@ export function MobileCardList<T extends BaseEntity>({
   };
 
   return (
-    <Stack gap="sm" my="md">
+    <Stack gap="sm">
       {((sort && sortOptions.length > 0) || filterFields.length > 0) && (
         <Group gap="xs" wrap="nowrap" justify="flex-end">
           {sort && sortOptions.length > 0 && (

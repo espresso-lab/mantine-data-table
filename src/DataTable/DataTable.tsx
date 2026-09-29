@@ -406,7 +406,7 @@ export function DataTable<T extends BaseEntity>({
   }
 
   return (
-    <>
+    <Stack gap="md">
       <Flex
         gap="xs"
         align={{ base: "stretch", sm: "center" }}
@@ -544,7 +544,7 @@ export function DataTable<T extends BaseEntity>({
       {topContent}
 
       {tabs && tabs.length > 0 && (
-        <Tabs value={activeTab} onChange={handleTabChange} mt="md">
+        <Tabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>
             {tabs.map((tab) => (
               <Tabs.Tab
@@ -561,7 +561,6 @@ export function DataTable<T extends BaseEntity>({
 
       {isError && (
         <Alert
-          mt="md"
           variant="light"
           color="red"
           title="Es ist ein Fehler aufgetreten."
@@ -573,7 +572,7 @@ export function DataTable<T extends BaseEntity>({
       )}
 
       {(isLoading || isRefetching) && (
-        <Stack my="md">
+        <Stack>
           <Skeleton height={40} />
           {Array(5)
             .fill(0)
@@ -588,7 +587,6 @@ export function DataTable<T extends BaseEntity>({
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
             {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
             <MantineDataTable
-              my="md"
               withTableBorder
               borderRadius="md"
               highlightOnHover
@@ -739,6 +737,6 @@ export function DataTable<T extends BaseEntity>({
           steps={steps}
         />
       </Modal>
-    </>
+    </Stack>
   );
 }
