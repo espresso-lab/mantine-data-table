@@ -18,7 +18,13 @@ interface BooleanFilter {
   value?: boolean;
 }
 
-export type Filter = DateFilter | StringFilter | BooleanFilter;
+interface PredicateFilter {
+  id: string | number;
+  type: "predicate";
+  value?: (record: never) => boolean;
+}
+
+export type Filter = DateFilter | StringFilter | BooleanFilter | PredicateFilter;
 
 function hasId(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && "id" in value;
@@ -60,6 +66,7 @@ function matchesDate(value: unknown, [from, to]: DatesRangeValue): boolean {
 
 function matchesFilter<T>(record: T, filter: Filter): boolean {
   if (filter.value === undefined) return true;
+  if (filter.type === "predicate") return (filter.value as (record: T) => boolean)(record);
   const value = (record as Record<string, unknown>)[filter.id as string];
   switch (filter.type) {
     case "query":
@@ -68,6 +75,8 @@ function matchesFilter<T>(record: T, filter: Filter): boolean {
       return matchesDate(value, filter.value);
     case "boolean":
       return value === filter.value;
+    default:
+      return true;
   }
 }
 

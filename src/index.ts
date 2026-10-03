@@ -39,3 +39,4 @@ export { useDataTable } from "./Hooks/useDataTable.ts";
 export { DataTableProvider } from "./Context/DataTableContext.tsx";
 export type { GetHeaders } from "./Context/DataTableContext.tsx";
 export { sortData } from "./utils/sort.ts";
+export type { Filter } from "./utils/filter.ts";
