@@ -635,7 +635,7 @@ export function DataTable<T extends BaseEntity>({
               highlightOnHover
               verticalSpacing="sm"
               horizontalSpacing="md"
-              minHeight={150}
+              minHeight={nested ? 0 : 150}
               pinLastColumn={showsRowActions}
               records={records}
               sortStatus={sortStatus}
