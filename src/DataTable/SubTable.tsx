@@ -71,7 +71,8 @@ export function SubTable<T>({ mobile, columns, rowActions, ...props }: SubTableP
     );
   }
 
-  const allColumns: SubTableColumn<T>[] = rowActions
+  const showsRowActions = !!rowActions && ((props.records ?? []) as T[]).some((record) => hasRowActions(rowActions(record)));
+  const allColumns: SubTableColumn<T>[] = showsRowActions
     ? [
         ...columns,
         {
@@ -79,11 +80,11 @@ export function SubTable<T>({ mobile, columns, rowActions, ...props }: SubTableP
           title: <VisuallyHidden>Aktionen</VisuallyHidden>,
           textAlign: "right",
           noWrap: true,
-          render: (record: T) => <RowActions {...rowActions(record)} />,
+          render: (record: T) => <RowActions {...rowActions!(record)} />,
         },
       ]
     : columns;
 
   // @ts-expect-error - DataTableProps is a discriminated union (columns vs groups) that does not survive Omit + spread
-  return <MantineDataTable columns={allColumns} pinLastColumn={!!rowActions} {...props} />;
+  return <MantineDataTable columns={allColumns} pinLastColumn={showsRowActions} {...props} />;
 }

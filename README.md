@@ -108,7 +108,8 @@ The table renders the whole list scaffold: the header (title, description, refre
 the bulk menu once rows are selected, and the create button „Benutzer anlegen" at the right end), a
 toolbar with the search field and your `toolbar` controls, and the table. Every row ends with its
 actions — further `rowActions`, then *Bearbeiten*, then *Löschen* (red, always last); on phones they
-move into the card's ⋯ menu. The actions column stays pinned to the right edge while a wide table
+move into the card's ⋯ menu. A table whose rows have no action at all gets no actions column. The
+actions column stays pinned to the right edge while a wide table
 scrolls sideways, and an expanded row is as wide as the visible part of the table and stays in place.
 A failed request shows an alert with „Erneut laden" instead of the table. Deleting always asks first
 and names the record.
@@ -121,7 +122,6 @@ A field describes both a table column and a form input.
 | --- | --- |
 | `id` | Unique key; used as the form field name and column accessor fallback. |
 | `list` / `create` / `update` / `delete` | Whether the field shows in the table, the create form, the edit form, and is editable. |
-| `inlineEdit` | Show a pencil in the cell; a click opens the edit modal for that row. A table with an inline-edited field drops the pencil from its row actions. Respects `canUpdate`. Default `false`. |
 | `type` | `text` (default), `number`, `date`, `boolean`, `textarea` or `custom`. |
 | `required` | `boolean` or `(values) => boolean`. |
 | `column` | A [mantine-datatable column](https://icflorescu.github.io/mantine-datatable/) — `accessor`, `title`, `render`, `sortable`, `textAlign`, `filter`, `footer`, `hidden`. |
@@ -142,7 +142,7 @@ A field describes both a table column and a form input.
 | `toolbar` | Filter controls rendered after the search field (object select, segmented filter, switches). |
 | `buttons` | Secondary header buttons, left of the create button. |
 | `createButtonText` | Overrides „‹entityName› anlegen". |
-| `rowActions` | `(record) => RowAction[]` — further row actions, shown before *Bearbeiten*/*Löschen* (more than two collapse into a ⋯ menu). |
+| `rowActions` | `(record) => RowAction[]` — further row actions, shown before *Bearbeiten*/*Löschen* (more than two collapse into a ⋯ menu). `variant: "light"` with a role `color` turns one into a status that opens the record (a green check, a red cross). |
 | `selection` | Row checkboxes; once rows are selected, „n ausgewählt" opens the bulk menu with your `actions` and *Löschen*. |
 | `actions` | Bulk actions on the selected rows; on phones they also appear in each card's menu. |
 | `pagination` | Client-side pagination. |

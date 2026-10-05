@@ -8,6 +8,7 @@ export interface RowAction {
   icon: React.ReactNode;
   onClick: () => void;
   color?: MantineColor;
+  variant?: "subtle" | "light";
   disabled?: boolean;
   loading?: boolean;
 }
@@ -27,7 +28,7 @@ function RowActionIcon({ action, name }: { action: RowAction; name?: string }) {
   return (
     <Tooltip label={action.label}>
       <ActionIcon
-        variant="subtle"
+        variant={action.variant ?? "subtle"}
         color={action.color ?? "gray"}
         disabled={action.disabled}
         loading={action.loading}
@@ -85,43 +86,48 @@ export function RowActions({ name, actions = [], onEdit, onDelete }: RowActionsP
 }
 
 export function RowActionsMenu({ name, actions = [], onEdit, onDelete }: RowActionsProps) {
-  if (!hasRowActions({ actions, onEdit, onDelete })) return null;
+  const statuses = actions.filter((action) => action.variant === "light");
+  const menuActions = actions.filter((action) => action.variant !== "light");
+  const hasMenu = hasRowActions({ actions: menuActions, onEdit, onDelete });
+  if (statuses.length === 0 && !hasMenu) return null;
   return (
-    <Menu>
-      <Menu.Target>
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          aria-label={describe("Weitere Aktionen", name)}
-          onClick={(event: React.MouseEvent) => event.stopPropagation()}
-        >
-          <IconDots size={16} />
-        </ActionIcon>
-      </Menu.Target>
-      <Menu.Dropdown onClick={(event: React.MouseEvent) => event.stopPropagation()}>
-        {onEdit && (
-          <Menu.Item leftSection={<IconPencil size={16} />} onClick={onEdit}>
-            Bearbeiten
-          </Menu.Item>
-        )}
-        {actions.map((action) => (
-          <Menu.Item
-            key={action.label}
-            leftSection={action.icon}
-            color={action.color}
-            disabled={action.disabled}
-            onClick={action.onClick}
-          >
-            {action.label}
-          </Menu.Item>
-        ))}
-        {onDelete && (onEdit || actions.length > 0) && <Menu.Divider />}
-        {onDelete && (
-          <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>
-            Löschen
-          </Menu.Item>
-        )}
-      </Menu.Dropdown>
-    </Menu>
+    <Group gap={4} justify="flex-end" wrap="nowrap" onClick={(event) => event.stopPropagation()}>
+      {statuses.map((action) => (
+        <RowActionIcon key={action.label} action={action} name={name} />
+      ))}
+      {hasMenu && (
+        <Menu>
+          <Menu.Target>
+            <ActionIcon variant="subtle" color="gray" aria-label={describe("Weitere Aktionen", name)}>
+              <IconDots size={16} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {onEdit && (
+              <Menu.Item leftSection={<IconPencil size={16} />} onClick={onEdit}>
+                Bearbeiten
+              </Menu.Item>
+            )}
+            {menuActions.map((action) => (
+              <Menu.Item
+                key={action.label}
+                leftSection={action.icon}
+                color={action.color}
+                disabled={action.disabled}
+                onClick={action.onClick}
+              >
+                {action.label}
+              </Menu.Item>
+            ))}
+            {onDelete && (onEdit || menuActions.length > 0) && <Menu.Divider />}
+            {onDelete && (
+              <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>
+                Löschen
+              </Menu.Item>
+            )}
+          </Menu.Dropdown>
+        </Menu>
+      )}
+    </Group>
   );
 }

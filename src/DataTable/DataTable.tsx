@@ -18,7 +18,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
-import { IconChevronDown, IconChevronRight, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronRight, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
@@ -32,6 +32,7 @@ import { PageHeader } from "./PageHeader";
 import { Crumb } from "./breadcrumbContext";
 import { RowAction, RowActions } from "./RowActions";
 import { SearchInput } from "./SearchInput";
+import { hasRowActions } from "../utils/rowActions";
 
 export type FieldType =
   | "text"
@@ -50,7 +51,6 @@ export interface Field<T> {
   create: boolean;
   update: boolean;
   delete: boolean;
-  inlineEdit?: boolean;
   type?: FieldType;
   placeholder?: string;
   conditional?: (values: Partial<T>) => boolean;
@@ -154,7 +154,6 @@ export interface DataTableProps<T extends BaseEntity> {
 
 const PAGE_SIZES = [10, 15, 50, 100, 500];
 
-const JUSTIFY_BY_ALIGN = { left: "flex-start", center: "center", right: "flex-end" } as const;
 
 export function DataTable<T extends BaseEntity>({
   title,
@@ -345,60 +344,12 @@ export function DataTable<T extends BaseEntity>({
   const hasCreateField = fields.some((field) => field.create);
   const hasUpdateField = fields.some((field) => field.update);
   const hasDeleteField = fields.some((field) => field.delete);
-  const editsInline = fields.some((field) => field.inlineEdit);
 
   const canEditRecord = (record: T) => hasUpdateField && (canUpdate ? canUpdate(record) : true);
   const canDeleteRecord = (record: T) => hasDeleteField && (canDelete ? canDelete(record) : true);
-  const editsInRow = hasUpdateField && !editsInline;
 
   const singular = entityName ?? "Eintrag";
 
-  const inlineEditFields: Field<T>[] = hasUpdateField
-    ? fields.map((field) => {
-        if (!field.inlineEdit) return field;
-        const originalRender = field.column.render;
-        return {
-          ...field,
-          column: {
-            ...field.column,
-            render: (record: T, recordIndex: number) => {
-              const editable = canEditRecord(record);
-              return (
-                <Group
-                  gap={4}
-                  wrap="nowrap"
-                  justify={JUSTIFY_BY_ALIGN[field.column.textAlign ?? "left"]}
-                  {...(editable && {
-                    onClick: (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      setEditRecord(record);
-                    },
-                    style: { cursor: "pointer" },
-                  })}
-                >
-                  {editable ? (
-                    <Tooltip label="Bearbeiten">
-                      <ActionIcon
-                        variant="subtle"
-                        color="gray"
-                        aria-label={recordLabel ? `Bearbeiten: ${recordLabel(record)}` : "Bearbeiten"}
-                      >
-                        <IconPencil size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  ) : (
-                    <Box w={28} style={{ flexShrink: 0 }} />
-                  )}
-                  {originalRender
-                    ? originalRender(record, recordIndex)
-                    : String(getValueAtPath(record, field.column.accessor) ?? "")}
-                </Group>
-              );
-            },
-          },
-        };
-      })
-    : fields;
 
   const [internalExpandedIds, setInternalExpandedIds] = useState<unknown[]>([]);
   const expandedRecordIds = rowExpansion?.expanded?.recordIds ?? internalExpandedIds;
@@ -415,7 +366,7 @@ export function DataTable<T extends BaseEntity>({
   const firstColumnIndex = fields.findIndex((field) => field.list && field.column && !field.column.hidden);
   const expansionFields: Field<T>[] =
     rowExpansion && firstColumnIndex >= 0
-      ? inlineEditFields.map((field, index) => {
+      ? fields.map((field, index) => {
           if (index !== firstColumnIndex) return field;
           const originalRender = field.column.render;
           return {
@@ -464,7 +415,7 @@ export function DataTable<T extends BaseEntity>({
             },
           };
         })
-      : inlineEditFields;
+      : fields;
 
   const [handledEditRecordId, setHandledEditRecordId] = useState<string | null>(null);
 
@@ -484,11 +435,11 @@ export function DataTable<T extends BaseEntity>({
 
   const rowActionsOf = (record: T) => ({
     actions: rowActions?.(record) ?? [],
-    onEdit: editsInRow && canEditRecord(record) ? () => setEditRecord(record) : undefined,
+    onEdit: canEditRecord(record) ? () => setEditRecord(record) : undefined,
     onDelete: canDeleteRecord(record) ? () => setDeleteRecords([record]) : undefined,
   });
 
-  const showsRowActions = editsInRow || hasDeleteField || !!rowActions;
+  const showsRowActions = (Array.isArray(allData) ? allData : []).some((record) => hasRowActions(rowActionsOf(record)));
   const rowActionsColumn: DataTableColumn<T> = {
     accessor: "__rowActions",
     title: <VisuallyHidden>Aktionen</VisuallyHidden>,
@@ -683,7 +634,7 @@ export function DataTable<T extends BaseEntity>({
                   allowMultiple: rowExpansion.allowMultiple ?? false,
                   trigger: onRowClick ? "never" : "click",
                   content: ({ record }: { record: T }) => (
-                    <Box bg="var(--mantine-color-body)" pos="sticky" left={0} w="100cqw">
+                    <Box bg="var(--mantine-color-body)" pos="sticky" left={0} w="100cqw" style={{ zIndex: 1 }}>
                       {rowExpansion.content(record, false)}
                     </Box>
                   ),
