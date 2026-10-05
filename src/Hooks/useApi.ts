@@ -30,7 +30,7 @@ async function fetchWithError(url: string, init: RequestInit): Promise<Response>
     if (!responseText) {
       throw new ApiError(`HTTP ${resp.status}: ${resp.statusText}`, resp.status);
     }
-    let errorJson: { message?: string; error?: string; title?: string; violations?: FieldViolation[] } | null = null;
+    let errorJson: { message?: string; error?: string; title?: string; violations?: FieldViolation[] } | null;
     try {
       errorJson = JSON.parse(responseText);
     } catch {

@@ -20,8 +20,18 @@ export type {
   StepConfig,
   TabOption,
   Action,
+  SearchConfig,
 } from "./DataTable/DataTable.tsx";
 export { DataTable } from "./DataTable/DataTable.tsx";
+export { PageHeader } from "./DataTable/PageHeader.tsx";
+export type { PageHeaderProps } from "./DataTable/PageHeader.tsx";
+export { BreadcrumbProvider, Breadcrumbs } from "./DataTable/Breadcrumbs.tsx";
+export { useBreadcrumbTrail } from "./DataTable/breadcrumbContext.ts";
+export type { Crumb } from "./DataTable/breadcrumbContext.ts";
+export { RowActions, RowActionsMenu } from "./DataTable/RowActions.tsx";
+export type { RowAction, RowActionsProps } from "./DataTable/RowActions.tsx";
+export { SearchInput } from "./DataTable/SearchInput.tsx";
+export type { SearchInputProps } from "./DataTable/SearchInput.tsx";
 export { CreateModal } from "./DataTable/CreateModal.tsx";
 export type { CreateModalProps } from "./DataTable/CreateModal.tsx";
 export { UpdateModal } from "./DataTable/UpdateModal.tsx";

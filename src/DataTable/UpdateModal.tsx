@@ -52,6 +52,7 @@ export function UpdateModal<T extends BaseEntity>({
       recordId={id}
       submitting={isPending}
       error={error}
+      submitLabel="Speichern"
       onPersist={persist}
       onClose={onClose}
     />

@@ -9,6 +9,16 @@ export interface DeleteModalProps<T> {
   apiPath: string;
   selectedRecords: T[];
   confirmMessage?: (records: T[]) => ReactNode;
+  recordLabel?: (record: T) => string;
+}
+
+const IRREVERSIBLE = "Das lässt sich nicht rückgängig machen.";
+
+function defaultMessage<T>(records: T[], recordLabel?: (record: T) => string) {
+  if (records.length > 1) return `${records.length} Einträge werden gelöscht. ${IRREVERSIBLE}`;
+  return recordLabel
+    ? `„${recordLabel(records[0])}“ wird gelöscht. ${IRREVERSIBLE}`
+    : `Der Eintrag wird gelöscht. ${IRREVERSIBLE}`;
 }
 
 export function DeleteModal<T extends BaseEntity>({
@@ -18,6 +28,7 @@ export function DeleteModal<T extends BaseEntity>({
   onClose,
   selectedRecords,
   confirmMessage,
+  recordLabel,
 }: DeleteModalProps<T>) {
   const { mutateAsync: del } = useDeleteOne(apiPath, queryKey, connectedQueryKeys);
 
@@ -39,7 +50,6 @@ export function DeleteModal<T extends BaseEntity>({
     <>
       {failures.length > 0 && (
         <Alert
-          variant="outline"
           color="red"
           mb="sm"
           title={
@@ -56,15 +66,11 @@ export function DeleteModal<T extends BaseEntity>({
         </Alert>
       )}
 
-      <Text>
-        {confirmMessage
-          ? confirmMessage(records)
-          : records.length === 1
-          ? `Soll ${records.length} Eintrag wirklich gelöscht werden?`
-          : `Sollen ${records.length} Einträge wirklich gelöscht werden?`}
+      <Text component="div" size="sm">
+        {confirmMessage ? confirmMessage(records) : defaultMessage(records, recordLabel)}
       </Text>
-      <Group mt="md" justify="end">
-        <Button onClick={onClose} variant="outline" disabled={isDeleting}>
+      <Group mt="md" justify="flex-end" gap="xs">
+        <Button onClick={onClose} variant="default" disabled={isDeleting}>
           Abbrechen
         </Button>
         <Button

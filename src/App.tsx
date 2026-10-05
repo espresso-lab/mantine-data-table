@@ -11,7 +11,7 @@ import { QueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { sortData } from "./utils/sort";
 import { DataTable as MantineDataTable, DataTableSortStatus } from "mantine-datatable";
-import { IconSearch, IconUsers, IconShield, IconUserCog, IconPencil, IconMail, IconTrash, IconChevronRight } from "@tabler/icons-react";
+import { IconSearch, IconUsers, IconShield, IconUserCog, IconMail, IconChevronRight } from "@tabler/icons-react";
 
 interface DemoItem {
   id: number;
@@ -85,10 +85,19 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
   const match = url.pathname.match(/^\/demo-api\/users(?:\/(\d+))?$/);
   if (!match) return browserFetch(input, init);
+  if (!match[1] && init?.method === "POST") {
+    const created = { ...JSON.parse(String(init.body)), id: Math.max(0, ...demoApiRecords.map((item) => item.id)) + 1 };
+    demoApiRecords.push(created);
+    return demoApiResponse(created, 201);
+  }
   if (!match[1]) return demoApiResponse(demoApiRecords);
   const record = demoApiRecords.find((item) => item.id === Number(match[1]));
   if (!record) return demoApiResponse({ message: "Nicht gefunden" }, 404);
   if (init?.method === "PUT") Object.assign(record, JSON.parse(String(init.body)));
+  if (init?.method === "DELETE") {
+    demoApiRecords.splice(demoApiRecords.indexOf(record), 1);
+    return new Response(null, { status: 204 });
+  }
   return demoApiResponse(record);
 };
 
@@ -118,11 +127,13 @@ export default function App() {
   const toggleExpanded = (id: number) =>
     setExpandedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
-  const demoActions = enableCardActions ? [
-    { icon: <IconPencil size={14} />, label: "Bearbeiten", onClick: (records: DemoItem[]) => alert(`Bearbeiten: ${records[0].name}`) },
-    { icon: <IconMail size={14} />, label: "E-Mail senden", onClick: (records: DemoItem[]) => alert(`E-Mail an: ${records[0].email}`) },
-    { icon: <IconTrash size={14} />, label: "Löschen", onClick: (records: DemoItem[]) => alert(`Löschen: ${records[0].name}`) },
-  ] : undefined;
+  const demoCardActions = enableCardActions
+    ? (record: DemoItem) => ({
+        actions: [{ icon: <IconMail size={16} />, label: "E-Mail senden", onClick: () => alert(`E-Mail an: ${record.email}`) }],
+        onEdit: () => alert(`Bearbeiten: ${record.name}`),
+        onDelete: () => alert(`Löschen: ${record.name}`),
+      })
+    : undefined;
 
   const [selectedRecords, setSelectedRecords] = useState<DemoItem[]>([]);
   const [sortField, setSortField] = useState("name");
@@ -232,15 +243,15 @@ export default function App() {
   ];
 
   const dataTableFields: Field<DemoItem>[] = [
-    { id: "name", list: true, create: false, update: true, delete: false, required: true, column: { accessor: "name", title: "Name", sortable: true } },
-    { id: "email", list: true, create: false, update: true, delete: false, inlineEdit: enableInlineEdit, column: { accessor: "email", title: "E-Mail", sortable: true } },
+    { id: "name", list: true, create: true, update: true, delete: true, required: true, column: { accessor: "name", title: "Name", sortable: true } },
+    { id: "email", list: true, create: true, update: true, delete: true, inlineEdit: enableInlineEdit, column: { accessor: "email", title: "E-Mail", sortable: true } },
     {
       id: "role",
       list: true,
       create: false,
       update: true,
       delete: false,
-      column: { accessor: "role", title: "Rolle", render: (record) => <Badge variant="light" size="sm">{record.role}</Badge> },
+      column: { accessor: "role", title: "Rolle", render: (record) => <Badge>{record.role}</Badge> },
     },
     {
       id: "active",
@@ -438,11 +449,11 @@ export default function App() {
             records={records}
             fields={fields}
             {...sharedProps}
-            {...(demoActions && { actions: demoActions })}
+            {...(demoCardActions && { cardActions: demoCardActions })}
           />
         ) : (
           <Box my="md">
-            {/* @ts-expect-error */}
+            {/* @ts-expect-error - demo passes a plain record list to the discriminated columns/groups union */}
             <MantineDataTable
               striped
               highlightOnHover
@@ -494,8 +505,16 @@ export default function App() {
 
         <DataTableProvider baseUrl="/demo-api" queryClient={demoQueryClient} getHeaders={demoHeaders}>
           <DataTable<DemoItem>
-            title="DataTable"
+            title="Benutzer"
+            titleOrder={2}
+            description={`${demoApiRecords.length} Benutzer`}
             titleHint="Mit DataTableProvider und Mock-API. Selection, Pagination, mobileCards, Row Expansion und onRowClick folgen den Schaltern oben; inlineEdit setzt den Stift in die E-Mail-Spalte."
+            entityName="Benutzer"
+            recordLabel={(record) => record.name}
+            search={{ placeholder: "Name oder E-Mail suchen" }}
+            rowActions={(record) => [
+              { icon: <IconMail size={16} />, label: "E-Mail senden", onClick: () => alert(`E-Mail an: ${record.email}`) },
+            ]}
             queryKey={["demo-users"]}
             apiPath="/users"
             fields={dataTableFields}

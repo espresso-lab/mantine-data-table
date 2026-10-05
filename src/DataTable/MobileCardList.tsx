@@ -1,9 +1,11 @@
-import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Menu, Pagination, Popover, Select, Stack, Text } from "@mantine/core";
+import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Pagination, Popover, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
-import { Action, Field } from "./DataTable";
+import { Field } from "./DataTable";
 import React, { useState } from "react";
-import { IconDotsVertical, IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+import { IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
 import { FieldCardRows, FieldRow } from "./FieldCard";
+import { RowActionsMenu, RowActionsProps } from "./RowActions";
+import { hasRowActions } from "../utils/rowActions";
 
 interface SortConfig {
   field: string;
@@ -15,9 +17,8 @@ interface MobileCardListProps<T extends BaseEntity> {
   records: T[];
   fields: Field<T>[];
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
-  actions?: Action<T>[];
-  canUpdate?: (record: T) => boolean;
-  canDelete?: (record: T) => boolean;
+  cardActions?: (record: T) => RowActionsProps;
+  noRecordsText?: string;
   pagination?: {
     totalRecords: number;
     recordsPerPage: number;
@@ -71,9 +72,8 @@ export function MobileCardList<T extends BaseEntity>({
   records,
   fields,
   onRowClick,
-  actions,
-  canUpdate,
-  canDelete,
+  cardActions,
+  noRecordsText = "Keine Einträge gefunden",
   pagination,
   sort,
   rowExpansion,
@@ -135,8 +135,9 @@ export function MobileCardList<T extends BaseEntity>({
                 style={{ flex: 1 }}
               />
               <ActionIcon
-                variant="filled"
+                variant="default"
                 size="input-sm"
+                aria-label={sort.direction === "asc" ? "Aufsteigend sortiert" : "Absteigend sortiert"}
                 onClick={() => sort.onSortChange(sort.field, sort.direction === "asc" ? "desc" : "asc")}
               >
                 {sort.direction === "asc" ? <IconSortAscending size={18} /> : <IconSortDescending size={18} />}
@@ -146,9 +147,10 @@ export function MobileCardList<T extends BaseEntity>({
           {filterFields.length > 0 && (
             <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-end" withArrow shadow="md" trapFocus>
               <Popover.Target>
-                <Indicator inline disabled={!hasActiveFilter} color="green" withBorder>
+                <Indicator inline disabled={!hasActiveFilter} withBorder>
                   <ActionIcon
-                    variant={hasActiveFilter ? "filled" : "default"}
+                    variant={hasActiveFilter ? "light" : "default"}
+                    color={hasActiveFilter ? undefined : "gray"}
                     size="input-sm"
                     onClick={() => setFilterOpen((o) => !o)}
                     aria-label="Filter"
@@ -165,7 +167,7 @@ export function MobileCardList<T extends BaseEntity>({
                         <Group gap="xs">
                           <Text fw={600} fz="sm">{(f.column.title as string) ?? f.id}</Text>
                           {f.column.filtering && (
-                            <Box w={8} h={8} bg="green" style={{ borderRadius: "50%" }} />
+                            <Box w={8} h={8} bg="var(--mantine-primary-color-filled)" style={{ borderRadius: "50%" }} />
                           )}
                         </Group>
                       </Accordion.Control>
@@ -185,7 +187,7 @@ export function MobileCardList<T extends BaseEntity>({
 
       {records.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
-          Keine Einträge gefunden
+          {noRecordsText}
         </Text>
       )}
 
@@ -215,44 +217,9 @@ export function MobileCardList<T extends BaseEntity>({
                   }
                 }}
               >
-                {actions && actions.length > 0 && (
+                {cardActions && hasRowActions(cardActions(record)) && (
                   <Group px="sm" pt="sm" justify="flex-end">
-                    {(() => {
-                      const filteredActions = actions.filter((action) => {
-                        if (action.label === "Bearbeiten" && canUpdate && !canUpdate(record)) return false;
-                        if (action.label === "Löschen" && canDelete && !canDelete(record)) return false;
-                        return true;
-                      });
-                      if (filteredActions.length === 0) return null;
-                      return (
-                      <Menu shadow="md" position="bottom-end">
-                        <Menu.Target>
-                          <ActionIcon
-                            variant="subtle"
-                            color="gray"
-                            size="sm"
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                          >
-                            <IconDotsVertical size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          {filteredActions.map((action, actionIndex) => (
-                            <Menu.Item
-                              key={`card_action_${actionIndex}`}
-                              leftSection={action.icon}
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                action.onClick([record]);
-                              }}
-                            >
-                              {action.label}
-                            </Menu.Item>
-                          ))}
-                        </Menu.Dropdown>
-                      </Menu>
-                      );
-                    })()}
+                    <RowActionsMenu {...cardActions(record)} />
                   </Group>
                 )}
                 <FieldCardRows
@@ -303,3 +270,4 @@ export function MobileCardList<T extends BaseEntity>({
     </Stack>
   );
 }
+

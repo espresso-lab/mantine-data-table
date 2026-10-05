@@ -44,6 +44,7 @@ export function CreateModal<T extends BaseEntity>({
       recordId={recordId}
       submitting={isCreating || isUpdating}
       error={createError ?? updateError}
+      submitLabel="Anlegen"
       onPersist={persist}
       onClose={onClose}
     />

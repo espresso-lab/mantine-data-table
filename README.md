@@ -87,7 +87,12 @@ const fields: Field<User>[] = [
 export function Users() {
   return (
     <DataTable<User>
-      title="Users"
+      title="Benutzer"
+      titleOrder={2}
+      description="12 Benutzer · 2 eingeladen"
+      entityName="Benutzer"
+      recordLabel={(user) => user.name}
+      search={{ placeholder: "Name oder E-Mail suchen" }}
       queryKey={["users"]}
       apiPath="/users"
       fields={fields}
@@ -99,6 +104,12 @@ export function Users() {
 }
 ```
 
+The table renders the whole list scaffold: the header (title, description, refresh, your `buttons`,
+the bulk menu once rows are selected, and the create button „Benutzer anlegen" at the right end), a
+toolbar with the search field and your `toolbar` controls, and the table. Every row ends with its
+actions — further `rowActions`, then *Bearbeiten*, then *Löschen* (red, always last); on phones they
+move into the card's ⋯ menu. Deleting always asks first and names the record.
+
 ### Fields
 
 A field describes both a table column and a form input.
@@ -107,7 +118,7 @@ A field describes both a table column and a form input.
 | --- | --- |
 | `id` | Unique key; used as the form field name and column accessor fallback. |
 | `list` / `create` / `update` / `delete` | Whether the field shows in the table, the create form, the edit form, and is editable. |
-| `inlineEdit` | Show a pencil in the cell; a click opens the edit modal for that row directly — same as selecting it and choosing *Bearbeiten* from the actions menu. Respects `canUpdate`. Default `false`. |
+| `inlineEdit` | Show a pencil in the cell; a click opens the edit modal for that row. A table with an inline-edited field drops the pencil from its row actions. Respects `canUpdate`. Default `false`. |
 | `type` | `text` (default), `number`, `date`, `boolean`, `textarea` or `custom`. |
 | `required` | `boolean` or `(values) => boolean`. |
 | `column` | A [mantine-datatable column](https://icflorescu.github.io/mantine-datatable/) — `accessor`, `title`, `render`, `sortable`, `textAlign`, `filter`, `footer`, `hidden`. |
@@ -118,18 +129,81 @@ A field describes both a table column and a form input.
 
 | Prop | Description |
 | --- | --- |
-| `selection` | Row checkboxes with the *Aktionen* menu (edit, delete, custom `actions`); without it the menu is hidden. |
+| `title`, `titleOrder` | Heading of the table; `titleOrder={2}` when the table is the page (default `4`, a section). |
+| `description` | Dimmed line under the title — a figure such as „7 Objekte · 110 Einheiten". |
+| `breadcrumbs`, `crumb` | Ancestors shown above a page-level title (`titleOrder` ≤ 2) and the current page's label when the title is no plain string (see *Breadcrumbs*). |
+| `titleHint` | Hover card behind an info icon next to the title. |
+| `entityName` | Singular noun of a record („Einheit"); names the create button („Einheit anlegen") and the dialogs („Einheit bearbeiten", „Einheit löschen?"). |
+| `recordLabel` | `(record) => string`; names the record in the delete confirmation and the row actions' labels. |
+| `search` | `true` or `{ placeholder, accessors, match }` filters the rows client-side; with `{ value, onChange }` the search is yours (server side). |
+| `toolbar` | Filter controls rendered after the search field (object select, segmented filter, switches). |
+| `buttons` | Secondary header buttons, left of the create button. |
+| `createButtonText` | Overrides „‹entityName› anlegen". |
+| `rowActions` | `(record) => RowAction[]` — further row actions, shown before *Bearbeiten*/*Löschen* (more than two collapse into a ⋯ menu). |
+| `selection` | Row checkboxes; once rows are selected, „n ausgewählt" opens the bulk menu with your `actions` and *Löschen*. |
+| `actions` | Bulk actions on the selected rows; on phones they also appear in each card's menu. |
 | `pagination` | Client-side pagination. |
 | `mobileCards` | Render a card list instead of the table below the `sm` breakpoint. |
 | `tabs` | Switch between datasets, each with its own query params and api path. |
-| `actions` | Custom bulk actions on the selected rows. |
 | `rowExpansion` | Expandable rows (see below). |
-| `defaultSort`, `queryParams`, `onRowClick`, `canUpdate`, `canDelete` | Optional. |
+| `noRecordsText` | Empty-table text; a search without hits says so on its own. |
+| `defaultSort`, `queryParams`, `onRowClick`, `canUpdate`, `canDelete`, `deleteConfirmMessage` | Optional. |
+
+## Building blocks
+
+The pieces the table is made of are exported, so a page without a table looks the same:
+
+```tsx
+import { PageHeader, RowActions, SearchInput } from "@espresso-lab/mantine-data-table";
+
+<PageHeader
+  title="Eigentümerversammlungen"
+  description="4 Versammlungen · 1 läuft gerade"
+  breadcrumbs={[{ label: "WEG Musterstraße 1", onClick: openObject }]}
+  badge={<Badge color="teal">Läuft</Badge>}
+  actions={<Button leftSection={<IconPlus size={16} />}>Versammlung anlegen</Button>}
+/>;
+
+<SearchInput value={query} onChange={setQuery} placeholder="Einheit oder Eigentümer suchen" />;
+
+<RowActions
+  name={unit.name}
+  actions={[{ label: "Herunterladen", icon: <IconDownload size={16} />, onClick: download }]}
+  onEdit={() => edit(unit)}
+  onDelete={() => confirmDelete(unit)}
+/>;
+```
+
+- `PageHeader` — the breadcrumb trail, the title (`order`, default `2`), badge and info `hint`
+  after it, the dimmed `description` below, `actions` on the right, wrapping under the title on a phone.
+- `SearchInput` — search icon, a clear button while there is text, full width on a phone.
+- `RowActions` — the row's action icons with tooltips: further actions (more than two in a ⋯ menu),
+  *Bearbeiten*, *Löschen*. It stops the click from reaching a clickable row.
+
+## Breadcrumbs
+
+Every page-level header (`PageHeader`, or a `DataTable` with `titleOrder={2}`) shows a breadcrumb
+trail ending in its own title. The app supplies the root once with `BreadcrumbProvider`; providers
+nest, so a section can add its own level for everything below it:
+
+```tsx
+import { BreadcrumbProvider } from "@espresso-lab/mantine-data-table";
+
+<BreadcrumbProvider trail={[{ label: "Übersicht", onClick: () => navigate({ to: "/" }) }]}>
+  <Outlet />
+</BreadcrumbProvider>;
+```
+
+A page passes only the ancestors between the root and itself in `breadcrumbs`. Below the `sm`
+breakpoint a trail of more than two crumbs keeps to one line: the earlier levels move into a ⋯ menu
+and long labels are truncated.
 
 ## Row expansion
 
 Set `rowExpansion` to render content under a row. A chevron is added to the first column
-automatically; `expandable` controls which rows can open.
+automatically; `expandable` controls which rows can open. The table's expansion cell has no padding,
+while a phone card already insets its content to the card's own edge — so content that needs
+padding sets it for desktop only (`p={isMobile ? 0 : "md"}`); a `SubTable` needs none.
 
 ```tsx
 import { SubTable } from "@espresso-lab/mantine-data-table";
@@ -165,7 +239,11 @@ import { SubTable } from "@espresso-lab/mantine-data-table";
 
 `SubTable` uses one set of columns for both layouts: a full mantine-datatable on desktop (sorting,
 column filters, footer totals) and a labelled card list on mobile. Add `hideOnMobile: (record) => boolean`
-to a column to drop low-value cells from the mobile cards.
+to a column to drop low-value cells from the mobile cards. Pass `rowActions={(record) => ({ name, onEdit,
+onDelete, actions })}` instead of building an action column: desktop gets the same right-aligned
+`RowActions` as `DataTable`, phones a ⋯ menu in each card. With `withTableBorder` the cards are white
+bordered surfaces like a `DataTable`'s; without it (a table inside an expanded row) they are tinted
+sub-cards.
 
 ## License
 

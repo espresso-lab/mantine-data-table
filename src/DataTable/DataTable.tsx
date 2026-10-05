@@ -1,15 +1,37 @@
-import { ActionIcon, Alert, Box, Button, Flex, Group, HoverCard, Menu, Modal, Skeleton, Stack, Tabs, Text, Title } from "@mantine/core";
+import {
+  ActionIcon,
+  Alert,
+  Box,
+  Button,
+  Group,
+  Menu,
+  Modal,
+  Skeleton,
+  Stack,
+  Tabs,
+  TitleOrder,
+  Tooltip,
+  UnstyledButton,
+  VisuallyHidden,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
-import { IconCaretDownFilled, IconChevronRight, IconInfoCircle, IconPencil, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronRight, IconInfoCircle, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
 import { usePersistentState } from "../Hooks/usePersistentState.ts";
 import { sortData } from "../utils/sort";
 import { applyFilters, Filter } from "../utils/filter";
+import { matchesSearch } from "../utils/search";
+import { isOwnEscape } from "../utils/escape";
 import { MobileCardList } from "./MobileCardList";
+import { PageHeader } from "./PageHeader";
+import { Crumb } from "./breadcrumbContext";
+import { RowAction, RowActions } from "./RowActions";
+import { SearchInput } from "./SearchInput";
 
 export type FieldType =
   | "text"
@@ -65,19 +87,36 @@ export interface StepConfig {
   description?: string;
 }
 
+export interface SearchConfig<T> {
+  placeholder?: string;
+  accessors?: string[];
+  match?: (record: T, query: string) => boolean;
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
 export interface DataTableProps<T extends BaseEntity> {
   title?: string | React.ReactNode;
+  titleOrder?: TitleOrder;
   titleHint?: React.ReactNode;
+  description?: React.ReactNode;
+  breadcrumbs?: Crumb[];
+  crumb?: React.ReactNode;
+  entityName?: string;
+  recordLabel?: (record: T) => string;
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
   mutationApiPath?: string;
   queryParams?: Record<string, string | number | boolean | null>;
   filters?: Filter[];
+  search?: boolean | SearchConfig<T>;
+  toolbar?: React.ReactNode;
   buttons?: React.ReactNode[];
   topContent?: React.ReactNode;
   createButtonText?: string;
   actions?: Action<T>[];
+  rowActions?: (record: T) => RowAction[];
   selection?: boolean;
   pagination?: boolean;
   steps?: StepConfig[];
@@ -107,6 +146,7 @@ export interface DataTableProps<T extends BaseEntity> {
   };
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
   mobileCards?: boolean;
+  noRecordsText?: string;
   deleteConfirmMessage?: (records: T[]) => React.ReactNode;
   editRecordId?: string | null;
   onEditRecordIdChange?: (id: string | null) => void;
@@ -118,7 +158,13 @@ const JUSTIFY_BY_ALIGN = { left: "flex-start", center: "center", right: "flex-en
 
 export function DataTable<T extends BaseEntity>({
   title,
+  titleOrder = 4,
   titleHint,
+  description,
+  breadcrumbs,
+  crumb,
+  entityName,
+  recordLabel,
   queryKey,
   connectedQueryKeys,
   apiPath,
@@ -129,7 +175,10 @@ export function DataTable<T extends BaseEntity>({
   selection,
   pagination,
   filters,
+  search,
+  toolbar,
   actions,
+  rowActions,
   steps,
   defaultSort,
   onSortChange,
@@ -147,10 +196,12 @@ export function DataTable<T extends BaseEntity>({
   rowExpansion,
   onRowClick,
   mobileCards = false,
+  noRecordsText,
   deleteConfirmMessage,
   editRecordId,
   onEditRecordIdChange,
 }: DataTableProps<T>) {
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
@@ -191,7 +242,19 @@ export function DataTable<T extends BaseEntity>({
     refetch,
   } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
 
-  const filteredData = applyFilters(Array.isArray(allData) ? allData : [], filters);
+  const searchConfig: SearchConfig<T> | undefined = search === true ? {} : search || undefined;
+  const [internalQuery, setInternalQuery] = useState("");
+  const query = searchConfig?.value ?? internalQuery;
+  const searchesLocally = !!searchConfig && !searchConfig.onChange;
+  const searchAccessors =
+    searchConfig?.accessors ??
+    fields.filter((field) => field.list && field.column && !field.column.hidden).map((field) => String(field.column.accessor));
+
+  const filteredData = applyFilters(Array.isArray(allData) ? allData : [], filters).filter(
+    (record) =>
+      !searchesLocally ||
+      (searchConfig.match ? !query.trim() || searchConfig.match(record, query) : matchesSearch(record, query, searchAccessors)),
+  );
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshRef = useRef<() => void | Promise<unknown>>(() => {});
@@ -210,11 +273,24 @@ export function DataTable<T extends BaseEntity>({
     return () => clearInterval(id);
   }, [pollInterval]);
 
+  const refresh = async () => {
+    if (!onRefresh) {
+      refetch();
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
     columnAccessor: defaultSort?.field ?? fields[0].id,
     direction: defaultSort?.direction ?? "desc",
   });
-  
+
   const handleSortChange = (newSortStatus: DataTableSortStatus<T>) => {
     setSortStatus(newSortStatus);
     if (onSortChange) {
@@ -242,27 +318,40 @@ export function DataTable<T extends BaseEntity>({
     setPage(1);
   };
 
+  const handleQueryChange = (value: string) => {
+    if (searchConfig?.onChange) {
+      searchConfig.onChange(value);
+    } else {
+      setInternalQuery(value);
+    }
+    setPage(1);
+  };
+
   const records = pagination
     ? sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : sortedData;
 
   const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
-
-  useEffect(() => {
-    setSelectedRecords([]);
-  }, [activeTab]);
-
+  const [selectionTab, setSelectionTab] = useState(activeTab);
+  const [editRecord, setEditRecord] = useState<T | null>(null);
+  const [deleteRecords, setDeleteRecords] = useState<T[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  if (selectionTab !== activeTab) {
+    setSelectionTab(activeTab);
+    setSelectedRecords([]);
+  }
+
+  const hasCreateField = fields.some((field) => field.create);
   const hasUpdateField = fields.some((field) => field.update);
   const hasDeleteField = fields.some((field) => field.delete);
+  const editsInline = fields.some((field) => field.inlineEdit);
 
-  const openUpdateModal = (record: T) => {
-    setSelectedRecords([record]);
-    setUpdateModalOpen(true);
-  };
+  const canEditRecord = (record: T) => hasUpdateField && (canUpdate ? canUpdate(record) : true);
+  const canDeleteRecord = (record: T) => hasDeleteField && (canDelete ? canDelete(record) : true);
+  const editsInRow = hasUpdateField && !editsInline;
+
+  const singular = entityName ?? "Eintrag";
 
   const inlineEditFields: Field<T>[] = hasUpdateField
     ? fields.map((field) => {
@@ -273,7 +362,7 @@ export function DataTable<T extends BaseEntity>({
           column: {
             ...field.column,
             render: (record: T, recordIndex: number) => {
-              const editable = canUpdate ? canUpdate(record) : true;
+              const editable = canEditRecord(record);
               return (
                 <Group
                   gap={4}
@@ -282,17 +371,23 @@ export function DataTable<T extends BaseEntity>({
                   {...(editable && {
                     onClick: (e: React.MouseEvent) => {
                       e.stopPropagation();
-                      openUpdateModal(record);
+                      setEditRecord(record);
                     },
                     style: { cursor: "pointer" },
                   })}
                 >
                   {editable ? (
-                    <ActionIcon size={16} variant="transparent" aria-label="Bearbeiten">
-                      <IconPencil size={16} />
-                    </ActionIcon>
+                    <Tooltip label="Bearbeiten">
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        aria-label={recordLabel ? `Bearbeiten: ${recordLabel(record)}` : "Bearbeiten"}
+                      >
+                        <IconPencil size={16} />
+                      </ActionIcon>
+                    </Tooltip>
                   ) : (
-                    <Box w={16} style={{ flexShrink: 0 }} />
+                    <Box w={28} style={{ flexShrink: 0 }} />
                   )}
                   {originalRender
                     ? originalRender(record, recordIndex)
@@ -329,27 +424,34 @@ export function DataTable<T extends BaseEntity>({
               ...field.column,
               render: (record: T, recordIndex: number) => {
                 const expandable = rowExpansion.expandable ? rowExpansion.expandable(record) : true;
+                const expanded = expandedRecordIds.includes(record.id);
                 return (
                   <Group gap="xs" wrap="nowrap" align="center">
                     {expandable ? (
-                      <Box
-                        component="span"
-                        aria-label="Aufklappen"
+                      <UnstyledButton
+                        aria-label={expanded ? "Zuklappen" : "Aufklappen"}
+                        aria-expanded={expanded}
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           toggleExpanded(record.id);
                         }}
-                        style={{ display: "inline-flex", flexShrink: 0, cursor: "pointer" }}
+                        style={{
+                          display: "inline-flex",
+                          flexShrink: 0,
+                          padding: 4,
+                          margin: -4,
+                          borderRadius: "var(--mantine-radius-sm)",
+                        }}
                       >
                         <IconChevronRight
                           size={16}
                           style={{
                             color: "var(--mantine-primary-color-filled)",
-                            transform: expandedRecordIds.includes(record.id) ? "rotate(90deg)" : undefined,
+                            transform: expanded ? "rotate(90deg)" : undefined,
                             transition: "transform 200ms ease",
                           }}
                         />
-                      </Box>
+                      </UnstyledButton>
                     ) : (
                       <Box w={16} style={{ flexShrink: 0 }} />
                     )}
@@ -364,182 +466,142 @@ export function DataTable<T extends BaseEntity>({
         })
       : inlineEditFields;
 
-  const handledEditRecordId = useRef<string | null>(null);
+  const [handledEditRecordId, setHandledEditRecordId] = useState<string | null>(null);
+
+  if (!editRecordId && handledEditRecordId !== null) {
+    setHandledEditRecordId(null);
+  } else if (editRecordId && editRecordId !== handledEditRecordId) {
+    const record = sortedData.find((r) => r.id === editRecordId);
+    if (record) {
+      setHandledEditRecordId(editRecordId);
+      setEditRecord(record);
+    }
+  }
 
   useEffect(() => {
-    if (!editRecordId) {
-      handledEditRecordId.current = null;
-      return;
-    }
-    if (handledEditRecordId.current === editRecordId) return;
-    const record = sortedData.find((r) => r.id === editRecordId);
-    if (!record) return;
-    handledEditRecordId.current = editRecordId;
-    setSelectedRecords([record]);
-    setUpdateModalOpen(true);
-    onEditRecordIdChange?.(null);
-  }, [editRecordId, sortedData]);
+    if (editRecordId && editRecordId === handledEditRecordId) onEditRecordIdChange?.(null);
+  }, [editRecordId, handledEditRecordId, onEditRecordIdChange]);
 
-  const mobileActions: Action<T>[] = [];
-  if (hasUpdateField) {
-    mobileActions.push({
-      icon: <IconPencil size={14} />,
-      label: "Bearbeiten",
-      onClick: (records: T[]) => {
-        setSelectedRecords(records);
-        setUpdateModalOpen(true);
-      },
-    });
-  }
-  if (actions) {
-    mobileActions.push(...actions);
-  }
-  if (hasDeleteField) {
-    mobileActions.push({
-      icon: <IconTrash size={14} />,
-      label: "Löschen",
-      onClick: (records: T[]) => {
-        setSelectedRecords(records);
-        setDeleteModalOpen(true);
-      },
-    });
-  }
+  const rowActionsOf = (record: T) => ({
+    actions: rowActions?.(record) ?? [],
+    onEdit: editsInRow && canEditRecord(record) ? () => setEditRecord(record) : undefined,
+    onDelete: canDeleteRecord(record) ? () => setDeleteRecords([record]) : undefined,
+  });
+
+  const showsRowActions = editsInRow || hasDeleteField || !!rowActions;
+  const rowActionsColumn: DataTableColumn<T> = {
+    accessor: "__rowActions",
+    title: <VisuallyHidden>Aktionen</VisuallyHidden>,
+    textAlign: "right",
+    noWrap: true,
+    render: (record: T) => <RowActions name={recordLabel?.(record)} {...rowActionsOf(record)} />,
+  };
+  const columns = [
+    ...expansionFields.map((field) => field.column),
+    ...(showsRowActions ? [rowActionsColumn] : []),
+  ];
+
+  const cardActionsOf = (record: T) => {
+    const own = rowActionsOf(record);
+    const bulk: RowAction[] = (actions ?? []).map((action) => ({
+      label: action.label,
+      icon: action.icon,
+      onClick: () => action.onClick([record]),
+      disabled: action.disabled?.([record]) ?? false,
+    }));
+    return {
+      ...own,
+      onEdit: hasUpdateField && canEditRecord(record) ? () => setEditRecord(record) : undefined,
+      actions: [...own.actions, ...bulk],
+    };
+  };
+
+  const bulkDeletable = hasDeleteField && selectedRecords.length > 0 && selectedRecords.every(canDeleteRecord);
+  const showsBulkMenu = !!selection && selectedRecords.length > 0 && ((actions ?? []).length > 0 || bulkDeletable);
+
+  const headerActions = (
+    <>
+      {showRefresh && (
+        <Tooltip label="Aktualisieren">
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="input-sm"
+            loading={isRefreshing}
+            onClick={refresh}
+            aria-label="Aktualisieren"
+          >
+            <IconRefresh size={18} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+      {buttons}
+      {showsBulkMenu && (
+        <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
+          <Menu>
+            <Menu.Target>
+              <Button variant="default" rightSection={<IconChevronDown size={16} />}>
+                {selectedRecords.length} ausgewählt
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {(actions ?? []).map((action) => (
+                <Menu.Item
+                  key={action.label}
+                  leftSection={action.icon}
+                  onClick={() => action.onClick(selectedRecords)}
+                  disabled={action.disabled?.(selectedRecords) ?? false}
+                >
+                  {action.label}
+                </Menu.Item>
+              ))}
+              {bulkDeletable && (actions ?? []).length > 0 && <Menu.Divider />}
+              {bulkDeletable && (
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconTrash size={16} />}
+                  onClick={() => setDeleteRecords(selectedRecords)}
+                >
+                  Löschen
+                </Menu.Item>
+              )}
+            </Menu.Dropdown>
+          </Menu>
+        </Box>
+      )}
+      {hasCreateField && (
+        <Button leftSection={<IconPlus size={16} />} onClick={() => setCreateModalOpen(true)} disabled={isLoading}>
+          {createButtonText ?? (entityName ? `${entityName} anlegen` : "Anlegen")}
+        </Button>
+      )}
+    </>
+  );
+
+  const closeEdit = () => setEditRecord(null);
+  const closeDelete = () => {
+    setDeleteRecords([]);
+    setSelectedRecords([]);
+  };
+
+  const emptyText = noRecordsText ?? (query.trim() ? `Keine Treffer für „${query.trim()}“` : "Keine Einträge gefunden");
 
   return (
     <Stack gap="md">
-      <Flex
-        gap="xs"
-        align={{ base: "stretch", sm: "center" }}
-        direction={{ base: "column", sm: "row" }}
-        justify={title ? "space-between" : "flex-end"}
-        wrap="wrap"
-      >
-        {title && (
-          <Group gap={6} align="center" wrap="nowrap">
-            {typeof title === "string" ? <Title order={4}>{title}</Title> : title}
-            {titleHint != null && (
-              <HoverCard
-                width={340}
-                shadow="md"
-                withArrow
-                openDelay={120}
-                closeDelay={160}
-                position="top-start"
-              >
-                <HoverCard.Target>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    radius="xl"
-                    aria-label="Mehr Informationen"
-                  >
-                    <IconInfoCircle size={16} />
-                  </ActionIcon>
-                </HoverCard.Target>
-                <HoverCard.Dropdown>
-                  <Text component="div" size="sm" c="dimmed">
-                    {titleHint}
-                  </Text>
-                </HoverCard.Dropdown>
-              </HoverCard>
-            )}
-          </Group>
-        )}
-        <Flex
-          align={{ base: "stretch", sm: "center" }}
-          direction={{ base: "column", sm: "row" }}
-          gap="xs"
-          wrap="wrap"
-          justify={{ base: "flex-start", sm: "flex-end" }}
-          ml={{ base: 0, sm: "auto" }}
-        >
-          {showRefresh && (
-            <ActionIcon
-              variant="subtle"
-              loading={isRefreshing}
-              onClick={async () => {
-                if (onRefresh) {
-                  setIsRefreshing(true);
-                  try {
-                    await onRefresh();
-                  } finally {
-                    setIsRefreshing(false);
-                  }
-                } else {
-                  refetch();
-                }
-              }}
-              aria-label="Neuladen"
-            >
-              <IconRefresh />
-            </ActionIcon>
-          )}
-          {selection && (() => {
-            const hasUpdateAction = fields.find((field) => field.update) && 
-              (!canUpdate || (selectedRecords.length > 0 && canUpdate(selectedRecords[0])));
-            const hasDeleteAction = fields.find((field) => field.delete) && 
-              (!canDelete || (selectedRecords.length > 0 && canDelete(selectedRecords[0])));
-            const hasCustomActions = (actions ?? []).length > 0;
-            const hasAnyAction = hasUpdateAction || hasDeleteAction || hasCustomActions;
-
-            return (
-              <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
-              <Menu shadow="md">
-                <Menu.Target>
-                  <Button
-                    variant="outline"
-                    rightSection={<IconCaretDownFilled size={14} />}
-                    disabled={!selectedRecords.length || !hasAnyAction}
-                  >
-                    Aktionen
-                  </Button>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  {hasUpdateAction && (
-                    <Menu.Item
-                      leftSection={<IconPencil size={14} />}
-                      onClick={() => setUpdateModalOpen(true)}
-                      disabled={selectedRecords.length !== 1}
-                    >
-                      Bearbeiten
-                    </Menu.Item>
-                  )}
-                  {(actions ?? []).map((action, index) => (
-                    <Menu.Item
-                      {...(action.icon && { leftSection: action.icon })}
-                      key={`custom_action_${index}`}
-                      onClick={() => action.onClick(selectedRecords)}
-                      disabled={action.disabled?.(selectedRecords) ?? false}
-                    >
-                      {action.label}
-                    </Menu.Item>
-                  ))}
-                  {hasDeleteAction && (
-                    <Menu.Item
-                      leftSection={<IconTrash size={14} />}
-                      onClick={() => setDeleteModalOpen(true)}
-                      color="red"
-                    >
-                      Löschen
-                    </Menu.Item>
-                  )}
-                </Menu.Dropdown>
-              </Menu>
-              </Box>
-            );
-          })()}
-          {fields.find((field) => field.create) && (
-            <Button
-              onClick={() => setCreateModalOpen(true)}
-              disabled={isLoading}
-            >
-              {createButtonText ?? "Erstellen"}
-            </Button>
-          )}
-          {buttons}
-        </Flex>
-      </Flex>
+      {title ? (
+        <PageHeader
+          title={title}
+          order={titleOrder}
+          description={description}
+          breadcrumbs={breadcrumbs}
+          crumb={crumb}
+          hint={titleHint}
+          actions={headerActions}
+        />
+      ) : (
+        <Group justify="flex-end" gap="xs" wrap="wrap">
+          {headerActions}
+        </Group>
+      )}
 
       {topContent}
 
@@ -559,9 +621,17 @@ export function DataTable<T extends BaseEntity>({
         </Tabs>
       )}
 
+      {(searchConfig || toolbar) && (
+        <Group gap="xs" wrap="wrap" align="flex-end">
+          {searchConfig && (
+            <SearchInput value={query} onChange={handleQueryChange} placeholder={searchConfig.placeholder} />
+          )}
+          {toolbar}
+        </Group>
+      )}
+
       {isError && (
         <Alert
-          variant="light"
           color="red"
           title="Es ist ein Fehler aufgetreten."
           icon={<IconInfoCircle />}
@@ -624,8 +694,8 @@ export function DataTable<T extends BaseEntity>({
                   }),
                 },
               })}
-              columns={expansionFields.map((field) => field.column)}
-              noRecordsText="Keine Einträge gefunden"
+              columns={columns}
+              noRecordsText={emptyText}
               onRowClick={onRowClick}
               {...(onRowClick && { style: { cursor: "pointer" } })}
             />
@@ -637,6 +707,7 @@ export function DataTable<T extends BaseEntity>({
                 records={records}
                 fields={expansionFields}
                 onRowClick={onRowClick}
+                noRecordsText={emptyText}
                 sort={{
                   field: String(sortStatus.columnAccessor),
                   direction: sortStatus.direction,
@@ -661,11 +732,7 @@ export function DataTable<T extends BaseEntity>({
                     ...(rowExpansion.expandable && { expandable: rowExpansion.expandable }),
                   },
                 })}
-                {...(mobileActions.length > 0 && {
-                  actions: mobileActions,
-                  canUpdate,
-                  canDelete,
-                })}
+                cardActions={cardActionsOf}
               />
             </Box>
           )}
@@ -673,58 +740,54 @@ export function DataTable<T extends BaseEntity>({
       )}
 
       <Modal
-        opened={updateModalOpen}
-        onClose={() => {
-          setUpdateModalOpen(false);
-          setSelectedRecords([]);
-        }}
-        title={title ?? "Bearbeiten"}
+        opened={editRecord !== null}
+        onClose={closeEdit}
+        closeOnEscape={false}
+        onKeyDown={(event) => isOwnEscape(event) && closeEdit()}
+        title={`${singular} bearbeiten`}
+        fullScreen={isMobile}
       >
-        {selectedRecords.length > 0 && (
+        {editRecord && (
           <UpdateModal<T>
             fields={fields.filter((field) => field.update)}
             queryKey={queryKey}
             connectedQueryKeys={connectedQueryKeys}
             apiPath={effectiveMutationApiPath}
-            id={selectedRecords[0].id}
-            onClose={() => {
-              setUpdateModalOpen(false);
-              setSelectedRecords([]);
-            }}
+            id={editRecord.id}
+            onClose={closeEdit}
             steps={steps}
           />
         )}
       </Modal>
 
-      {selectedRecords.length > 0 && (
-        <Modal
-          opened={deleteModalOpen}
-          onClose={() => {
-            setDeleteModalOpen(false);
-            setSelectedRecords([]);
-          }}
-          title={title ?? "Löschen"}
-        >
+      <Modal
+        opened={deleteRecords.length > 0}
+        onClose={closeDelete}
+        title={deleteRecords.length > 1 ? `${deleteRecords.length} Einträge löschen?` : `${singular} löschen?`}
+        centered
+      >
+        {deleteRecords.length > 0 && (
           <DeleteModal<T>
-            onClose={() => {
-              setDeleteModalOpen(false);
-              setSelectedRecords([]);
-            }}
+            onClose={closeDelete}
             queryKey={queryKey}
             connectedQueryKeys={connectedQueryKeys}
             apiPath={effectiveMutationApiPath}
-            selectedRecords={selectedRecords}
+            selectedRecords={deleteRecords}
             confirmMessage={deleteConfirmMessage}
+            recordLabel={recordLabel}
           />
-        </Modal>
-      )}
+        )}
+      </Modal>
 
       <Modal
         opened={createModalOpen}
         onClose={() => {
           setCreateModalOpen(false);
         }}
-        title={title ?? "Anlegen"}
+        closeOnEscape={false}
+        onKeyDown={(event) => isOwnEscape(event) && setCreateModalOpen(false)}
+        title={`${singular} anlegen`}
+        fullScreen={isMobile}
       >
         <CreateModal<T>
           queryKey={queryKey}

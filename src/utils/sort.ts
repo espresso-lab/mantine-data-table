@@ -57,10 +57,11 @@ function toSortValue(value: unknown, columnType: ColumnType): string | number | 
       }
       if (value instanceof Date) return value.getTime();
       return null;
-    case "number":
+    case "number": {
       if (typeof value === "number") return value;
       const num = parseFloat(String(value).trim());
       return isNaN(num) ? null : num;
+    }
     case "string":
       return (typeof value === "string" ? value : String(value)).toLowerCase().trim();
     default:

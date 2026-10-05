@@ -1,4 +1,4 @@
-import { Stack } from "@mantine/core";
+import { Group, Stack, VisuallyHidden } from "@mantine/core";
 import React from "react";
 import {
   DataTable as MantineDataTable,
@@ -9,6 +9,8 @@ import {
   humanize,
 } from "mantine-datatable";
 import { FieldCard, FieldRow } from "./FieldCard";
+import { RowActions, RowActionsMenu, RowActionsProps } from "./RowActions";
+import { hasRowActions } from "../utils/rowActions";
 
 export type SubTableColumn<T> = DataTableColumn<T> & {
   hideOnMobile?: (record: T) => boolean;
@@ -17,6 +19,7 @@ export type SubTableColumn<T> = DataTableColumn<T> & {
 export type SubTableProps<T> = Omit<MantineDataTableProps<T>, "columns"> & {
   mobile: boolean;
   columns: SubTableColumn<T>[];
+  rowActions?: (record: T) => RowActionsProps;
 };
 
 function CellValue<T>({
@@ -31,7 +34,7 @@ function CellValue<T>({
   return <>{render(record, index)}</>;
 }
 
-export function SubTable<T>({ mobile, columns, ...props }: SubTableProps<T>) {
+export function SubTable<T>({ mobile, columns, rowActions, ...props }: SubTableProps<T>) {
   if (mobile) {
     const records = (props.records ?? []) as T[];
     return (
@@ -48,12 +51,39 @@ export function SubTable<T>({ mobile, columns, ...props }: SubTableProps<T>) {
               ),
             }));
           const key = props.idAccessor ? (getRecordId(record, props.idAccessor) as React.Key) : index;
-          return <FieldCard key={key} rows={rows} />;
+          const actions = rowActions?.(record);
+          return (
+            <FieldCard
+              key={key}
+              rows={rows}
+              variant={props.withTableBorder ? "surface" : "nested"}
+              header={
+                actions && hasRowActions(actions) ? (
+                  <Group px="sm" pt="sm" justify="flex-end">
+                    <RowActionsMenu {...actions} />
+                  </Group>
+                ) : undefined
+              }
+            />
+          );
         })}
       </Stack>
     );
   }
 
+  const allColumns: SubTableColumn<T>[] = rowActions
+    ? [
+        ...columns,
+        {
+          accessor: "__rowActions",
+          title: <VisuallyHidden>Aktionen</VisuallyHidden>,
+          textAlign: "right",
+          noWrap: true,
+          render: (record: T) => <RowActions {...rowActions(record)} />,
+        },
+      ]
+    : columns;
+
   // @ts-expect-error - DataTableProps is a discriminated union (columns vs groups) that does not survive Omit + spread
-  return <MantineDataTable columns={columns} {...props} />;
+  return <MantineDataTable columns={allColumns} {...props} />;
 }

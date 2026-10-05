@@ -26,12 +26,22 @@ export function FieldCardRows({ rows }: { readonly rows: readonly FieldRow[] }) 
   );
 }
 
-export function FieldCard({ rows }: { readonly rows: readonly FieldRow[] }) {
+export function FieldCard({
+  rows,
+  header,
+  variant = "nested",
+}: {
+  readonly rows: readonly FieldRow[];
+  readonly header?: React.ReactNode;
+  readonly variant?: "nested" | "surface";
+}) {
   return (
     <Box
-      bg="var(--mantine-color-gray-light)"
+      bg={variant === "surface" ? "var(--mantine-color-body)" : "var(--mantine-color-gray-light)"}
+      bd={variant === "surface" ? "1px solid var(--mantine-color-default-border)" : undefined}
       style={{ borderRadius: "var(--mantine-radius-md)", overflow: "hidden" }}
     >
+      {header}
       <FieldCardRows rows={rows} />
     </Box>
   );

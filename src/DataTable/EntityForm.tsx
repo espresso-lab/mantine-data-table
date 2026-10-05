@@ -1,4 +1,4 @@
-import { Alert, Button, Checkbox, Group, NumberInput, Stepper, Textarea, TextInput } from "@mantine/core";
+import { Alert, Button, Checkbox, Group, NumberInput, Stack, Stepper, Textarea, TextInput } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 // @ts-expect-error - FormRule not publicly exported from @mantine/form
@@ -89,6 +89,7 @@ export interface EntityFormProps<T extends BaseEntity> {
   recordId?: string | number;
   submitting: boolean;
   error?: Error | null;
+  submitLabel: string;
   onPersist: (values: T) => Promise<void>;
   onClose: () => void;
 }
@@ -100,6 +101,7 @@ export function EntityForm<T extends BaseEntity>({
   recordId,
   submitting,
   error,
+  submitLabel,
   onPersist,
   onClose,
 }: EntityFormProps<T>) {
@@ -139,7 +141,7 @@ export function EntityForm<T extends BaseEntity>({
       case "date":
         return <DateInput key={form.key(field.id)} valueFormat="DD.MM.YYYY" clearable label={field.column.title} placeholder={field.placeholder ?? ""} required={required} {...inputProps} />;
       case "boolean":
-        return <Checkbox key={form.key(field.id)} mt="md" label={field.column.title} required={required} {...form.getInputProps(field.id as string, { type: "checkbox" })} />;
+        return <Checkbox key={form.key(field.id)} mt="xs" label={field.column.title} required={required} {...form.getInputProps(field.id as string, { type: "checkbox" })} />;
       case "textarea":
         return <Textarea key={form.key(field.id)} minRows={3} autosize label={field.column.title} placeholder={field.placeholder ?? ""} required={required} {...inputProps} />;
       case "custom":
@@ -154,15 +156,18 @@ export function EntityForm<T extends BaseEntity>({
     }
   }
 
-  const fieldsToRender = (step?: number) =>
-    (step === undefined ? fields : fields.filter((f) => f.step === step)).map((field) => (
-      <Fragment key={field.id}>{renderField(field)}</Fragment>
-    ));
+  const fieldsToRender = (step?: number) => (
+    <Stack gap="sm">
+      {(step === undefined ? fields : fields.filter((f) => f.step === step)).map((field) => (
+        <Fragment key={field.id}>{renderField(field)}</Fragment>
+      ))}
+    </Stack>
+  );
 
   return (
     <>
       {generalError && (
-        <Alert variant="outline" color="red" title="Fehler aufgetreten" mb="lg">
+        <Alert color="red" title="Nicht gespeichert" mb="md">
           {generalError}
         </Alert>
       )}
@@ -199,12 +204,12 @@ export function EntityForm<T extends BaseEntity>({
         )}
 
         {!hideButtons && (
-          <Group mt="md" justify="end">
-            <Button variant="outline" onClick={() => (hasSteps && active > 0 ? setActive((current) => current - 1) : onClose())}>
+          <Group mt="md" justify="flex-end" gap="xs">
+            <Button variant="default" onClick={() => (hasSteps && active > 0 ? setActive((current) => current - 1) : onClose())}>
               {hasSteps && active > 0 ? "Zurück" : "Abbrechen"}
             </Button>
             <Button type="submit" loading={submitting}>
-              {hasSteps && !isLastStep ? "Weiter" : "Speichern"}
+              {hasSteps && !isLastStep ? "Weiter" : submitLabel}
             </Button>
           </Group>
         )}
