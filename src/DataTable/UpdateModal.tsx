@@ -1,5 +1,5 @@
 import { Group, Skeleton, Stack } from "@mantine/core";
-import { BaseEntity, useGetOne, useUpdateOne } from "../Hooks/useApi";
+import { BaseEntity, useGetOne, useUpdateOne, useUpdateWith } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTable.tsx";
 import { EntityForm } from "./EntityForm.tsx";
 
@@ -11,6 +11,8 @@ export interface UpdateModalProps<T> {
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
   id: string | number;
+  record?: T;
+  onUpdate?: (values: T) => Promise<unknown>;
 }
 
 export function UpdateModal<T extends BaseEntity>({
@@ -21,11 +23,16 @@ export function UpdateModal<T extends BaseEntity>({
   apiPath,
   id,
   steps,
+  record,
+  onUpdate,
 }: UpdateModalProps<T>) {
-  const { data, isLoading } = useGetOne<T>(apiPath, queryKey, id);
-  const { mutateAsync: update, isPending, error } = useUpdateOne<T>(apiPath, queryKey, connectedQueryKeys);
+  const fetched = useGetOne<T>(apiPath, queryKey, onUpdate ? undefined : id);
+  const standard = useUpdateOne<T>(apiPath, queryKey, connectedQueryKeys);
+  const custom = useUpdateWith<T>((values) => onUpdate?.(values) ?? Promise.resolve(), queryKey, connectedQueryKeys);
+  const data = onUpdate ? record : fetched.data;
+  const mutation = onUpdate ? custom : standard;
 
-  if (isLoading || !data) {
+  if (!data) {
     return (
       <Stack gap="md">
         <Skeleton height={40} />
@@ -41,7 +48,7 @@ export function UpdateModal<T extends BaseEntity>({
   }
 
   const persist = async (values: T) => {
-    await update({ ...values, id });
+    await mutation.mutateAsync({ ...values, id });
   };
 
   return (
@@ -50,8 +57,8 @@ export function UpdateModal<T extends BaseEntity>({
       steps={steps}
       record={data}
       recordId={id}
-      submitting={isPending}
-      error={error}
+      submitting={mutation.isPending}
+      error={mutation.error}
       submitLabel="Speichern"
       onPersist={persist}
       onClose={onClose}

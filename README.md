@@ -142,6 +142,9 @@ A field describes both a table column and a form input.
 | `toolbar` | Filter controls rendered after the search field (object select, segmented filter, switches). |
 | `buttons` | Secondary header buttons, left of the create button. |
 | `createButtonText` | Overrides „‹entityName› anlegen". |
+| `nested` | The table is a list inside an open record (an expanded row, a dialog): the create button becomes the light „‹entityName› hinzufügen", its dialog says „hinzufügen" too, the refresh icon and the phone sort control are left out, phone cards are tinted and an empty list is one dimmed line. |
+| `editAction` | `(record) => ({ label, icon })` — relabels *Bearbeiten* per row. A value typed in over a calculated one shows it here: `IconPencilCheck` with „Manuell überschrieben – bearbeiten". |
+| `onUpdate` | `(values, record) => Promise` — saves the edit dialog yourself instead of `PUT apiPath/{id}`; the dialog starts from the row instead of fetching the record. |
 | `rowActions` | `(record) => RowAction[]` — further row actions, shown before *Bearbeiten*/*Löschen* (more than two collapse into a ⋯ menu). `variant: "light"` with a role `color` turns one into a status that opens the record (a green check, a red cross). |
 | `selection` | Row checkboxes; once rows are selected, „n ausgewählt" opens the bulk menu with your `actions` and *Löschen*. |
 | `actions` | Bulk actions on the selected rows; on phones they also appear in each card's menu. |
@@ -207,9 +210,14 @@ and long labels are truncated.
 ## Row expansion
 
 Set `rowExpansion` to render content under a row. A chevron is added to the first column
-automatically; `expandable` controls which rows can open. The table's expansion cell has no padding,
-while a phone card already insets its content to the card's own edge — so content that needs
-padding sets it for desktop only (`p={isMobile ? 0 : "md"}`); a `SubTable` needs none.
+automatically; `expandable` controls which rows can open. The expansion insets its content itself —
+`md` on desktop, the card's own inset on a phone — so the content brings no padding of its own.
+
+A list in the expanded row is `nested`: a `SubTable` when its rows are already loaded, a `DataTable` when
+it is edited with its own requests. Both then render the same section — a header with `title` (order 4),
+an optional `description` and actions on the right, a bordered table on desktop and tinted cards on a
+phone, column footers as a last card on a phone, and a dimmed one-liner (`noRecordsText`) instead of an
+empty table.
 
 ```tsx
 import { SubTable } from "@espresso-lab/mantine-data-table";
@@ -224,9 +232,12 @@ import { SubTable } from "@espresso-lab/mantine-data-table";
     expandable: (account) => account.entries.length > 0,
     content: (account, isMobile) => (
       <SubTable
+        nested
+        title="Buchungen"
         mobile={isMobile}
         records={account.entries}
         idAccessor="id"
+        noRecordsText="Keine Buchungen"
         columns={[
           { accessor: "date", title: "Date", render: (e) => formatDate(e.date) },
           {
@@ -243,13 +254,32 @@ import { SubTable } from "@espresso-lab/mantine-data-table";
 />;
 ```
 
+A list in the expanded row that is edited on its own — entries added, changed and deleted with
+their own requests — is a `DataTable` with `nested` instead, so it brings its dialogs along:
+
+```tsx
+rowExpansion={{
+  content: (tenancy) => (
+    <DataTable<RentStep>
+      nested
+      title="Mietstaffelung"
+      entityName="Mietstaffel"
+      apiPath={`/tenancies/${tenancy.id}/rent-steps`}
+      queryKey={["tenancies", tenancy.id, "rent-steps"]}
+      fields={rentStepFields}
+      mobileCards
+    />
+  ),
+}}
+```
+
 `SubTable` uses one set of columns for both layouts: a full mantine-datatable on desktop (sorting,
 column filters, footer totals) and a labelled card list on mobile. Add `hideOnMobile: (record) => boolean`
 to a column to drop low-value cells from the mobile cards. Pass `rowActions={(record) => ({ name, onEdit,
 onDelete, actions })}` instead of building an action column: desktop gets the same right-aligned
-`RowActions` as `DataTable`, pinned while the table scrolls sideways, phones a ⋯ menu in each card. With `withTableBorder` the cards are white
-bordered surfaces like a `DataTable`'s; without it (a table inside an expanded row) they are tinted
-sub-cards.
+`RowActions` as `DataTable`, pinned while the table scrolls sideways, phones a ⋯ menu in each card. A
+table of its own (`withTableBorder`) shows white bordered cards like a `DataTable`'s, a `nested` one
+tinted sub-cards.
 
 ## License
 

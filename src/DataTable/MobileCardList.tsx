@@ -28,6 +28,7 @@ interface MobileCardListProps<T extends BaseEntity> {
     onRecordsPerPageChange?: (size: number) => void;
   };
   sort?: SortConfig;
+  variant?: "surface" | "nested";
   rowExpansion?: {
     expandable?: (record: T) => boolean;
     content: (record: T, isMobile: boolean) => React.ReactNode;
@@ -76,6 +77,7 @@ export function MobileCardList<T extends BaseEntity>({
   noRecordsText = "Keine Einträge gefunden",
   pagination,
   sort,
+  variant = "surface",
   rowExpansion,
 }: MobileCardListProps<T>) {
   const [internalExpandedIds, setInternalExpandedIds] = useState<Set<string | number>>(new Set());
@@ -199,8 +201,8 @@ export function MobileCardList<T extends BaseEntity>({
         return (
           <React.Fragment key={recordKey}>
             <Box
-              bg="var(--mantine-color-body)"
-              bd="1px solid var(--mantine-color-default-border)"
+              bg={variant === "surface" ? "var(--mantine-color-body)" : "var(--mantine-color-gray-light)"}
+              bd={variant === "surface" ? "1px solid var(--mantine-color-default-border)" : undefined}
               style={{
                 borderRadius: "var(--mantine-radius-md)",
                 overflow: "hidden",

@@ -17,6 +17,8 @@ export interface RowActionsProps {
   name?: string;
   actions?: RowAction[];
   onEdit?: () => void;
+  editLabel?: string;
+  editIcon?: React.ReactNode;
   onDelete?: () => void;
 }
 
@@ -41,7 +43,7 @@ function RowActionIcon({ action, name }: { action: RowAction; name?: string }) {
   );
 }
 
-export function RowActions({ name, actions = [], onEdit, onDelete }: RowActionsProps) {
+export function RowActions({ name, actions = [], onEdit, editLabel = "Bearbeiten", editIcon, onDelete }: RowActionsProps) {
   const collapsed = actions.length > MAX_VISIBLE_ACTIONS;
 
   return (
@@ -73,7 +75,7 @@ export function RowActions({ name, actions = [], onEdit, onDelete }: RowActionsP
         actions.map((action) => <RowActionIcon key={action.label} action={action} name={name} />)
       )}
       {onEdit && (
-        <RowActionIcon action={{ label: "Bearbeiten", icon: <IconPencil size={16} />, onClick: onEdit }} name={name} />
+        <RowActionIcon action={{ label: editLabel, icon: editIcon ?? <IconPencil size={16} />, onClick: onEdit }} name={name} />
       )}
       {onDelete && (
         <RowActionIcon
@@ -85,7 +87,7 @@ export function RowActions({ name, actions = [], onEdit, onDelete }: RowActionsP
   );
 }
 
-export function RowActionsMenu({ name, actions = [], onEdit, onDelete }: RowActionsProps) {
+export function RowActionsMenu({ name, actions = [], onEdit, editLabel = "Bearbeiten", editIcon, onDelete }: RowActionsProps) {
   const statuses = actions.filter((action) => action.variant === "light");
   const menuActions = actions.filter((action) => action.variant !== "light");
   const hasMenu = hasRowActions({ actions: menuActions, onEdit, onDelete });
@@ -104,8 +106,8 @@ export function RowActionsMenu({ name, actions = [], onEdit, onDelete }: RowActi
           </Menu.Target>
           <Menu.Dropdown>
             {onEdit && (
-              <Menu.Item leftSection={<IconPencil size={16} />} onClick={onEdit}>
-                Bearbeiten
+              <Menu.Item leftSection={editIcon ?? <IconPencil size={16} />} onClick={onEdit}>
+                {editLabel}
               </Menu.Item>
             )}
             {menuActions.map((action) => (

@@ -11,6 +11,7 @@ export interface CreateModalProps<T> {
   apiPath: string;
   steps?: StepConfig[];
   onCreated?: (id: string | number) => void;
+  submitLabel?: string;
 }
 
 export function CreateModal<T extends BaseEntity>({
@@ -21,6 +22,7 @@ export function CreateModal<T extends BaseEntity>({
   apiPath,
   steps,
   onCreated,
+  submitLabel = "Anlegen",
 }: CreateModalProps<T>) {
   const [recordId, setRecordId] = useState<string | number>();
 
@@ -44,7 +46,7 @@ export function CreateModal<T extends BaseEntity>({
       recordId={recordId}
       submitting={isCreating || isUpdating}
       error={createError ?? updateError}
-      submitLabel="Anlegen"
+      submitLabel={submitLabel}
       onPersist={persist}
       onClose={onClose}
     />

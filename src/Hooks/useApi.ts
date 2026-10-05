@@ -193,6 +193,18 @@ export function useUpdateOne<T extends BaseEntity>(
   });
 }
 
+export function useUpdateWith<T>(
+  update: (values: T) => Promise<unknown>,
+  queryKey: Array<string | number>,
+  connectedQueryKeys?: Array<Array<string | number>>,
+) {
+  const { queryClient } = useDataTable();
+  return useMutation<unknown, Error, T>({
+    mutationFn: update,
+    onSettled: () => invalidateAfterMutation(queryClient, queryKey, connectedQueryKeys),
+  });
+}
+
 export function useDeleteOne(
   apiPath: string,
   queryKey: Array<string | number>,

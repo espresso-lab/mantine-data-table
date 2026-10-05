@@ -9,12 +9,13 @@ import {
   Skeleton,
   Stack,
   Tabs,
+  Text,
   TitleOrder,
   Tooltip,
   UnstyledButton,
   VisuallyHidden,
 } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { useElementSize, useMediaQuery } from "@mantine/hooks";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
@@ -26,7 +27,7 @@ import { usePersistentState } from "../Hooks/usePersistentState.ts";
 import { sortData } from "../utils/sort";
 import { applyFilters, Filter } from "../utils/filter";
 import { matchesSearch } from "../utils/search";
-import { isOwnEscape } from "../utils/escape";
+import { closeOnOwnEscape } from "../utils/escape";
 import { MobileCardList } from "./MobileCardList";
 import { PageHeader } from "./PageHeader";
 import { Crumb } from "./breadcrumbContext";
@@ -117,6 +118,9 @@ export interface DataTableProps<T extends BaseEntity> {
   createButtonText?: string;
   actions?: Action<T>[];
   rowActions?: (record: T) => RowAction[];
+  nested?: boolean;
+  editAction?: (record: T) => { label?: string; icon?: React.ReactNode };
+  onUpdate?: (values: T, record: T) => Promise<unknown>;
   selection?: boolean;
   pagination?: boolean;
   steps?: StepConfig[];
@@ -178,6 +182,9 @@ export function DataTable<T extends BaseEntity>({
   toolbar,
   actions,
   rowActions,
+  nested = false,
+  editAction,
+  onUpdate,
   steps,
   defaultSort,
   onSortChange,
@@ -189,7 +196,7 @@ export function DataTable<T extends BaseEntity>({
   onActiveTabChange,
   canUpdate,
   canDelete,
-  showRefresh = true,
+  showRefresh = !nested,
   onRefresh,
   autoPoll,
   rowExpansion,
@@ -201,6 +208,8 @@ export function DataTable<T extends BaseEntity>({
   onEditRecordIdChange,
 }: DataTableProps<T>) {
   const isMobile = useMediaQuery("(max-width: 48em)");
+  const { ref: rootRef, width: rootWidth } = useElementSize();
+  const cardsOnly = nested && mobileCards && rootWidth > 0 && rootWidth < 600;
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
@@ -349,6 +358,7 @@ export function DataTable<T extends BaseEntity>({
   const canDeleteRecord = (record: T) => hasDeleteField && (canDelete ? canDelete(record) : true);
 
   const singular = entityName ?? "Eintrag";
+  const createVerb = nested ? "hinzufügen" : "anlegen";
 
 
   const [internalExpandedIds, setInternalExpandedIds] = useState<unknown[]>([]);
@@ -436,6 +446,8 @@ export function DataTable<T extends BaseEntity>({
   const rowActionsOf = (record: T) => ({
     actions: rowActions?.(record) ?? [],
     onEdit: canEditRecord(record) ? () => setEditRecord(record) : undefined,
+    editLabel: editAction?.(record).label,
+    editIcon: editAction?.(record).icon,
     onDelete: canDeleteRecord(record) ? () => setDeleteRecords([record]) : undefined,
   });
 
@@ -487,7 +499,7 @@ export function DataTable<T extends BaseEntity>({
         </Tooltip>
       )}
       {buttons}
-      {showsBulkMenu && (
+      {showsBulkMenu && !cardsOnly && (
         <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
           <Menu>
             <Menu.Target>
@@ -521,8 +533,14 @@ export function DataTable<T extends BaseEntity>({
         </Box>
       )}
       {hasCreateField && (
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setCreateModalOpen(true)} disabled={isLoading}>
-          {createButtonText ?? (entityName ? `${entityName} anlegen` : "Anlegen")}
+        <Button
+          variant={nested ? "light" : undefined}
+          size={nested ? "xs" : undefined}
+          leftSection={<IconPlus size={nested ? 14 : 16} />}
+          onClick={() => setCreateModalOpen(true)}
+          disabled={isLoading}
+        >
+          {createButtonText ?? `${singular} ${createVerb}`}
         </Button>
       )}
     </>
@@ -537,7 +555,7 @@ export function DataTable<T extends BaseEntity>({
   const emptyText = noRecordsText ?? (query.trim() ? `Keine Treffer für „${query.trim()}“` : "Keine Einträge gefunden");
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" ref={rootRef}>
       {title ? (
         <PageHeader
           title={title}
@@ -592,7 +610,7 @@ export function DataTable<T extends BaseEntity>({
       {(isLoading || isRefetching) && (
         <Stack>
           <Skeleton height={40} />
-          {Array(5)
+          {Array(nested ? 2 : 5)
             .fill(0)
             .map((_, index) => (
               <Skeleton key={`skeleton-${index}`} height={35} />
@@ -600,8 +618,15 @@ export function DataTable<T extends BaseEntity>({
         </Stack>
       )}
 
-      {!isLoading && !isRefetching && (!isError || allData !== undefined) && (
+      {!isLoading && !isRefetching && nested && !isError && sortedData.length === 0 && (
+        <Text size="sm" c="dimmed">
+          {emptyText}
+        </Text>
+      )}
+
+      {!isLoading && !isRefetching && (!isError || allData !== undefined) && !(nested && sortedData.length === 0) && (
         <>
+          {!cardsOnly && (
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
             {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
             <MantineDataTable
@@ -634,7 +659,7 @@ export function DataTable<T extends BaseEntity>({
                   allowMultiple: rowExpansion.allowMultiple ?? false,
                   trigger: onRowClick ? "never" : "click",
                   content: ({ record }: { record: T }) => (
-                    <Box bg="var(--mantine-color-body)" pos="sticky" left={0} w="100cqw" style={{ zIndex: 1 }}>
+                    <Box bg="var(--mantine-color-body)" pos="sticky" left={0} w="100cqw" p="md" style={{ zIndex: 1 }}>
                       {rowExpansion.content(record, false)}
                     </Box>
                   ),
@@ -650,15 +675,17 @@ export function DataTable<T extends BaseEntity>({
               style={{ containerType: "inline-size", ...(onRowClick && { cursor: "pointer" }) }}
             />
           </Box>
+          )}
 
           {mobileCards && (
-            <Box hiddenFrom="sm">
+            <Box {...(cardsOnly ? {} : { hiddenFrom: "sm" })}>
               <MobileCardList
                 records={records}
                 fields={expansionFields}
                 onRowClick={onRowClick}
                 noRecordsText={emptyText}
-                sort={{
+                variant={nested ? "nested" : "surface"}
+                sort={nested ? undefined : {
                   field: String(sortStatus.columnAccessor),
                   direction: sortStatus.direction,
                   onSortChange: (field, direction) => {
@@ -693,7 +720,7 @@ export function DataTable<T extends BaseEntity>({
         opened={editRecord !== null}
         onClose={closeEdit}
         closeOnEscape={false}
-        onKeyDown={(event) => isOwnEscape(event) && closeEdit()}
+        onKeyDown={closeOnOwnEscape(closeEdit)}
         title={`${singular} bearbeiten`}
         fullScreen={isMobile}
       >
@@ -706,6 +733,8 @@ export function DataTable<T extends BaseEntity>({
             id={editRecord.id}
             onClose={closeEdit}
             steps={steps}
+            record={editRecord}
+            onUpdate={onUpdate ? (values) => onUpdate(values, editRecord) : undefined}
           />
         )}
       </Modal>
@@ -713,6 +742,8 @@ export function DataTable<T extends BaseEntity>({
       <Modal
         opened={deleteRecords.length > 0}
         onClose={closeDelete}
+        closeOnEscape={false}
+        onKeyDown={closeOnOwnEscape(closeDelete)}
         title={deleteRecords.length > 1 ? `${deleteRecords.length} Einträge löschen?` : `${singular} löschen?`}
         centered
       >
@@ -735,8 +766,8 @@ export function DataTable<T extends BaseEntity>({
           setCreateModalOpen(false);
         }}
         closeOnEscape={false}
-        onKeyDown={(event) => isOwnEscape(event) && setCreateModalOpen(false)}
-        title={`${singular} anlegen`}
+        onKeyDown={closeOnOwnEscape(() => setCreateModalOpen(false))}
+        title={`${singular} ${createVerb}`}
         fullScreen={isMobile}
       >
         <CreateModal<T>
@@ -748,6 +779,7 @@ export function DataTable<T extends BaseEntity>({
           }}
           fields={fields.filter((field) => field.create)}
           steps={steps}
+          submitLabel={nested ? "Hinzufügen" : "Anlegen"}
         />
       </Modal>
     </Stack>
