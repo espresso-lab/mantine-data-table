@@ -1,9 +1,7 @@
 import { Alert, Button, Checkbox, Group, NumberInput, Stack, Stepper, Textarea, TextInput } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-// @ts-expect-error - FormRule not publicly exported from @mantine/form
-import type { FormRule } from "@mantine/form/lib/types";
-import { Fragment, useEffect, useState } from "react";
+import { FormEvent, Fragment, useEffect, useState } from "react";
 import { BaseEntity, getFieldViolations } from "../Hooks/useApi";
 import { Field, StepConfig } from "./DataTable.tsx";
 
@@ -23,20 +21,24 @@ function buildInitialValues<T>(fields: Field<T>[]): T {
   }, {} as T);
 }
 
-function buildValidation<T>(fields: Field<T>[]) {
-  return fields
-    .filter((field) => field.required)
-    .reduce(
-      (acc, field) => {
-        acc[field.id as keyof T] = (value: never, values: T) => {
-          if (field.conditional && !field.conditional(values)) return null;
-          if (!resolveRequired(field, values)) return null;
-          return value ? null : "Pflichtfeld";
-        };
-        return acc;
-      },
-      {} as Partial<{ [Key in keyof T]: FormRule<T[Key], T> }>,
-    );
+function isMissing<T>(field: Field<T>, value: unknown): boolean {
+  if (field.type === "boolean") return value !== true;
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && value.trim() === "") ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
+function missingRequired<T>(fields: Field<T>[], values: T): Record<string, string> {
+  return Object.fromEntries(
+    fields
+      .filter((field) => !field.conditional || field.conditional(values))
+      .filter((field) => resolveRequired(field, values))
+      .filter((field) => isMissing(field, (values as Record<string, unknown>)[field.id]))
+      .map((field) => [field.id, "Pflichtfeld"]),
+  );
 }
 
 function cleanValues<T>(rawValues: T, fields: Field<T>[]): T {
@@ -111,8 +113,12 @@ export function EntityForm<T extends BaseEntity>({
   const form = useForm<T>({
     mode: "uncontrolled",
     initialValues: buildInitialValues(fields),
-    validate: buildValidation(fields),
   });
+
+  const setCustomValues = (patch: Partial<T>) => {
+    form.setValues(patch);
+    Object.keys(patch).forEach((key) => form.clearFieldError(key));
+  };
 
   useEffect(() => {
     if (record) {
@@ -147,14 +153,41 @@ export function EntityForm<T extends BaseEntity>({
       case "custom":
         return field.render?.(
           { ...values, ...(recordId != null && { id: recordId }) } as T,
-          form.setValues,
+          setCustomValues,
           setHideButtons,
-          { error: inputProps.error, required },
+          { error: inputProps.error, required, errors: form.errors },
         );
       default:
         return <TextInput key={form.key(field.id)} type={field.id.includes("email") ? "email" : undefined} label={field.column.title} placeholder={field.placeholder ?? ""} required={required} {...inputProps} />;
     }
   }
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const raw = form.getValues();
+    const missing = missingRequired(hasSteps ? fields.filter((f) => f.step === stepsAvailable[active]) : fields, raw);
+    if (Object.keys(missing).length > 0) {
+      form.setErrors(missing);
+      requestAnimationFrame(() => formElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
+    const values = cleanValues(raw, fields);
+    try {
+      await onPersist(values);
+    } catch (submitError) {
+      const fieldErrors = mapFieldViolations(submitError, fieldIds);
+      if (Object.keys(fieldErrors).length > 0) form.setErrors(fieldErrors);
+      return;
+    }
+    if (hasSteps && !isLastStep) {
+      setActive((current) => current + 1);
+    } else {
+      form.setInitialValues(values);
+      form.reset();
+      onClose();
+    }
+  };
 
   const fieldsToRender = (step?: number) => (
     <Stack gap="sm">
@@ -172,25 +205,7 @@ export function EntityForm<T extends BaseEntity>({
         </Alert>
       )}
 
-      <form
-        onSubmit={form.onSubmit(async (raw) => {
-          const values = cleanValues(raw as T, fields);
-          try {
-            await onPersist(values);
-          } catch (submitError) {
-            const fieldErrors = mapFieldViolations(submitError, fieldIds);
-            if (Object.keys(fieldErrors).length > 0) form.setErrors(fieldErrors);
-            return;
-          }
-          if (hasSteps && !isLastStep) {
-            setActive((current) => current + 1);
-          } else {
-            form.setInitialValues(values);
-            form.reset();
-            onClose();
-          }
-        })}
-      >
+      <form noValidate onSubmit={submit}>
         {hasSteps ? (
           <Stepper active={active} size="sm">
             {stepsAvailable.map((step) => (

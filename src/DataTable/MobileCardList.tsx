@@ -3,7 +3,7 @@ import { BaseEntity } from "../Hooks/useApi";
 import { Field } from "./DataTable";
 import React, { useState } from "react";
 import { IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
-import { FieldCardRows, FieldRow } from "./FieldCard";
+import { FieldCardRows, FieldRow, FooterCard } from "./FieldCard";
 import { RowActionsMenu, RowActionsProps } from "./RowActions";
 import { hasRowActions } from "../utils/rowActions";
 
@@ -243,6 +243,8 @@ export function MobileCardList<T extends BaseEntity>({
           </React.Fragment>
         );
       })}
+
+      {records.length > 0 && <FooterCard columns={listFields.map((field) => field.column)} variant={variant} />}
 
       {pagination && pagination.totalRecords > pagination.recordsPerPage && (
         <Stack gap="xs" mt="sm">

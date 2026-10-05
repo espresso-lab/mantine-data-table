@@ -111,7 +111,7 @@ actions — further `rowActions`, then *Bearbeiten*, then *Löschen* (red, alway
 move into the card's ⋯ menu. A table whose rows have no action at all gets no actions column. The
 actions column stays pinned to the right edge while a wide table
 scrolls sideways, and an expanded row is as wide as the visible part of the table and stays in place.
-A failed request shows an alert with „Erneut laden" instead of the table. Deleting always asks first
+Column footers (sums) appear as a last card on phones. A failed request shows an alert with „Erneut laden" instead of the table. Deleting always asks first
 and names the record.
 
 ### Fields
@@ -123,9 +123,9 @@ A field describes both a table column and a form input.
 | `id` | Unique key; used as the form field name and column accessor fallback. |
 | `list` / `create` / `update` / `delete` | Whether the field shows in the table, the create form, the edit form, and is editable. |
 | `type` | `text` (default), `number`, `date`, `boolean`, `textarea` or `custom`. |
-| `required` | `boolean` or `(values) => boolean`. |
+| `required` | `boolean` or `(values) => boolean`. The form checks it on submit — „Pflichtfeld" at the field, the first one focused, no browser bubble; `0` counts as a value, a `boolean` field must be ticked, a multi-step form checks only the current step. |
 | `column` | A [mantine-datatable column](https://icflorescu.github.io/mantine-datatable/) — `accessor`, `title`, `render`, `sortable`, `textAlign`, `filter`, `footer`, `hidden`. |
-| `render` | For `type: "custom"` — render your own input. |
+| `render` | For `type: "custom"` — render your own input from `(values, setValues, hideButtons, { error, required, errors })`; show `error` at it. A render with several inputs (an address) reads their messages from `errors` and declares each required key as a field of its own with `render: () => null`. |
 | `defaultValue`, `placeholder`, `step`, `conditional` | Optional. |
 
 ### Common props

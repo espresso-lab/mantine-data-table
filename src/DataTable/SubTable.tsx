@@ -8,7 +8,7 @@ import {
   getValueAtPath,
   humanize,
 } from "mantine-datatable";
-import { FieldCard, FieldRow } from "./FieldCard";
+import { FieldCard, FieldRow, FooterCard } from "./FieldCard";
 import { PageHeader } from "./PageHeader";
 import { RowActions, RowActionsMenu, RowActionsProps } from "./RowActions";
 import { hasRowActions } from "../utils/rowActions";
@@ -37,27 +37,6 @@ function CellValue<T>({
   index: number;
 }) {
   return <>{render(record, index)}</>;
-}
-
-function FooterCard<T>({ columns, variant }: { columns: SubTableColumn<T>[]; variant: "surface" | "nested" }) {
-  const [first, ...rest] = columns.filter((column) => !column.hidden);
-  const rows: FieldRow[] = rest
-    .filter((column) => column.footer != null)
-    .map((column) => ({ label: column.title ?? humanize(String(column.accessor)), value: column.footer }));
-  if (rows.length === 0) return null;
-  return (
-    <FieldCard
-      rows={rows}
-      variant={variant}
-      header={
-        first?.footer != null ? (
-          <Text fw={700} fz="sm" px="sm" pt="sm">
-            {first.footer}
-          </Text>
-        ) : undefined
-      }
-    />
-  );
 }
 
 export function SubTable<T>({

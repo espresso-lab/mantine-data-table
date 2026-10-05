@@ -62,6 +62,7 @@ export interface Field<T> {
     validationProps?: {
       error?: string;
       required?: boolean;
+      errors?: Record<string, React.ReactNode>;
     },
   ) => React.ReactNode;
   column: DataTableColumn<T>;

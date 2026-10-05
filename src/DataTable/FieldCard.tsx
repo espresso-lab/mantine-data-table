@@ -1,4 +1,5 @@
 import { Box, Divider, Group, Text } from "@mantine/core";
+import { DataTableColumn, humanize } from "mantine-datatable";
 import React from "react";
 
 export interface FieldRow {
@@ -44,5 +45,32 @@ export function FieldCard({
       {header}
       <FieldCardRows rows={rows} />
     </Box>
+  );
+}
+
+export function FooterCard<T>({
+  columns,
+  variant,
+}: {
+  readonly columns: readonly DataTableColumn<T>[];
+  readonly variant: "surface" | "nested";
+}) {
+  const [first, ...rest] = columns.filter((column) => !column.hidden);
+  const rows: FieldRow[] = rest
+    .filter((column) => column.footer != null)
+    .map((column) => ({ label: column.title ?? humanize(String(column.accessor)), value: column.footer }));
+  if (rows.length === 0) return null;
+  return (
+    <FieldCard
+      rows={rows}
+      variant={variant}
+      header={
+        first?.footer != null ? (
+          <Text component="div" fw={700} fz="sm" px="sm" pt="sm">
+            {first.footer}
+          </Text>
+        ) : undefined
+      }
+    />
   );
 }
