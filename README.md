@@ -108,7 +108,10 @@ The table renders the whole list scaffold: the header (title, description, refre
 the bulk menu once rows are selected, and the create button „Benutzer anlegen" at the right end), a
 toolbar with the search field and your `toolbar` controls, and the table. Every row ends with its
 actions — further `rowActions`, then *Bearbeiten*, then *Löschen* (red, always last); on phones they
-move into the card's ⋯ menu. Deleting always asks first and names the record.
+move into the card's ⋯ menu. The actions column stays pinned to the right edge while a wide table
+scrolls sideways, and an expanded row is as wide as the visible part of the table and stays in place.
+A failed request shows an alert with „Erneut laden" instead of the table. Deleting always asks first
+and names the record.
 
 ### Fields
 
@@ -154,7 +157,7 @@ A field describes both a table column and a form input.
 The pieces the table is made of are exported, so a page without a table looks the same:
 
 ```tsx
-import { PageHeader, RowActions, SearchInput } from "@espresso-lab/mantine-data-table";
+import { PageHeader, RowActions, SearchInput, ViewSwitch } from "@espresso-lab/mantine-data-table";
 
 <PageHeader
   title="Eigentümerversammlungen"
@@ -177,6 +180,9 @@ import { PageHeader, RowActions, SearchInput } from "@espresso-lab/mantine-data-
 - `PageHeader` — the breadcrumb trail, the title (`order`, default `2`), badge and info `hint`
   after it, the dimmed `description` below, `actions` on the right, wrapping under the title on a phone.
 - `SearchInput` — search icon, a clear button while there is text, full width on a phone.
+- `ViewSwitch` — switches the views of one area (`value`, `onChange`, `data` of `{ value, label }`,
+  `label` as its accessible name): a `SegmentedControl` from the `sm` breakpoint, a full-width
+  `Select` with the same entries below it, where three German labels no longer fit side by side.
 - `RowActions` — the row's action icons with tooltips: further actions (more than two in a ⋯ menu),
   *Bearbeiten*, *Löschen*. It stops the click from reaching a clickable row.
 
@@ -241,7 +247,7 @@ import { SubTable } from "@espresso-lab/mantine-data-table";
 column filters, footer totals) and a labelled card list on mobile. Add `hideOnMobile: (record) => boolean`
 to a column to drop low-value cells from the mobile cards. Pass `rowActions={(record) => ({ name, onEdit,
 onDelete, actions })}` instead of building an action column: desktop gets the same right-aligned
-`RowActions` as `DataTable`, phones a ⋯ menu in each card. With `withTableBorder` the cards are white
+`RowActions` as `DataTable`, pinned while the table scrolls sideways, phones a ⋯ menu in each card. With `withTableBorder` the cards are white
 bordered surfaces like a `DataTable`'s; without it (a table inside an expanded row) they are tinted
 sub-cards.
 

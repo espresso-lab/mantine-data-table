@@ -18,7 +18,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { BaseEntity, useGetAll } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
-import { IconChevronDown, IconChevronRight, IconInfoCircle, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronRight, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
@@ -631,13 +631,10 @@ export function DataTable<T extends BaseEntity>({
       )}
 
       {isError && (
-        <Alert
-          color="red"
-          title="Es ist ein Fehler aufgetreten."
-          icon={<IconInfoCircle />}
-        >
-          Bitte versuche es später erneut oder sende eine Nachricht an unseren
-          Support.
+        <Alert color="red" title={typeof title === "string" ? `${title} nicht geladen` : "Einträge nicht geladen"}>
+          <Button variant="default" size="xs" leftSection={<IconRefresh size={14} />} onClick={() => refetch()}>
+            Erneut laden
+          </Button>
         </Alert>
       )}
 
@@ -652,7 +649,7 @@ export function DataTable<T extends BaseEntity>({
         </Stack>
       )}
 
-      {!isLoading && !isRefetching && (
+      {!isLoading && !isRefetching && (!isError || allData !== undefined) && (
         <>
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
             {/* @ts-expect-error - conditional pagination spread not compatible with strict prop types */}
@@ -663,7 +660,7 @@ export function DataTable<T extends BaseEntity>({
               verticalSpacing="sm"
               horizontalSpacing="md"
               minHeight={150}
-              fetching={isError}
+              pinLastColumn={showsRowActions}
               records={records}
               sortStatus={sortStatus}
               onSortStatusChange={handleSortChange}
@@ -686,7 +683,9 @@ export function DataTable<T extends BaseEntity>({
                   allowMultiple: rowExpansion.allowMultiple ?? false,
                   trigger: onRowClick ? "never" : "click",
                   content: ({ record }: { record: T }) => (
-                    <Box bg="var(--mantine-color-body)">{rowExpansion.content(record, false)}</Box>
+                    <Box bg="var(--mantine-color-body)" pos="sticky" left={0} w="100cqw">
+                      {rowExpansion.content(record, false)}
+                    </Box>
                   ),
                   expanded: { recordIds: expandedRecordIds, onRecordIdsChange: handleExpandedRecordIdsChange },
                   ...(rowExpansion.expandable && {
@@ -697,7 +696,7 @@ export function DataTable<T extends BaseEntity>({
               columns={columns}
               noRecordsText={emptyText}
               onRowClick={onRowClick}
-              {...(onRowClick && { style: { cursor: "pointer" } })}
+              style={{ containerType: "inline-size", ...(onRowClick && { cursor: "pointer" }) }}
             />
           </Box>
 

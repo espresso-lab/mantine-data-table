@@ -32,6 +32,8 @@ export { RowActions, RowActionsMenu } from "./DataTable/RowActions.tsx";
 export type { RowAction, RowActionsProps } from "./DataTable/RowActions.tsx";
 export { SearchInput } from "./DataTable/SearchInput.tsx";
 export type { SearchInputProps } from "./DataTable/SearchInput.tsx";
+export { ViewSwitch } from "./DataTable/ViewSwitch.tsx";
+export type { ViewSwitchOption, ViewSwitchProps } from "./DataTable/ViewSwitch.tsx";
 export { CreateModal } from "./DataTable/CreateModal.tsx";
 export type { CreateModalProps } from "./DataTable/CreateModal.tsx";
 export { UpdateModal } from "./DataTable/UpdateModal.tsx";

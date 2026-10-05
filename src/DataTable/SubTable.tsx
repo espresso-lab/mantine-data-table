@@ -85,5 +85,5 @@ export function SubTable<T>({ mobile, columns, rowActions, ...props }: SubTableP
     : columns;
 
   // @ts-expect-error - DataTableProps is a discriminated union (columns vs groups) that does not survive Omit + spread
-  return <MantineDataTable columns={allColumns} {...props} />;
+  return <MantineDataTable columns={allColumns} pinLastColumn={!!rowActions} {...props} />;
 }
