@@ -110,11 +110,11 @@ export function MobileCardList<T extends BaseEntity>({
   const [filterOpen, setFilterOpen] = useState(false);
 
   const sortOptions = listFields
-    .filter((f) => f.column.sortable !== false)
+    .filter((f) => f.column.sortable !== false && (f.column.title == null || typeof f.column.title === "string"))
     .reduce<{ value: string; label: string }[]>((acc, f) => {
       const value = (f.column.accessor ?? f.id) as string;
       if (!acc.some((o) => o.value === value)) {
-        acc.push({ value, label: (f.column.title as string) ?? f.id });
+        acc.push({ value, label: (f.column.title as string | undefined) ?? f.id });
       }
       return acc;
     }, []);
