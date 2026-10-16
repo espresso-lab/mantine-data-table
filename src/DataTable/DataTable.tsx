@@ -247,7 +247,6 @@ export function DataTable<T extends BaseEntity>({
     data: allData,
     isLoading,
     isError,
-    isRefetching,
     refetch,
   } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
 
@@ -344,6 +343,7 @@ export function DataTable<T extends BaseEntity>({
   const [selectionTab, setSelectionTab] = useState(activeTab);
   const [editRecord, setEditRecord] = useState<T | null>(null);
   const [deleteRecords, setDeleteRecords] = useState<T[]>([]);
+  const bulkMenuTarget = useRef<HTMLButtonElement>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   if (selectionTab !== activeTab) {
@@ -482,6 +482,10 @@ export function DataTable<T extends BaseEntity>({
 
   const bulkDeletable = hasDeleteField && selectedRecords.length > 0 && selectedRecords.every(canDeleteRecord);
   const showsBulkMenu = !!selection && selectedRecords.length > 0 && ((actions ?? []).length > 0 || bulkDeletable);
+  const runFromBulkMenu = (run: () => void) => () => {
+    bulkMenuTarget.current?.focus();
+    run();
+  };
 
   const headerActions = (
     <>
@@ -504,7 +508,7 @@ export function DataTable<T extends BaseEntity>({
         <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
           <Menu>
             <Menu.Target>
-              <Button variant="default" rightSection={<IconChevronDown size={16} />}>
+              <Button ref={bulkMenuTarget} variant="default" rightSection={<IconChevronDown size={16} />}>
                 {selectedRecords.length} ausgewählt
               </Button>
             </Menu.Target>
@@ -513,7 +517,7 @@ export function DataTable<T extends BaseEntity>({
                 <Menu.Item
                   key={action.label}
                   leftSection={action.icon}
-                  onClick={() => action.onClick(selectedRecords)}
+                  onClick={runFromBulkMenu(() => action.onClick(selectedRecords))}
                   disabled={action.disabled?.(selectedRecords) ?? false}
                 >
                   {action.label}
@@ -524,7 +528,7 @@ export function DataTable<T extends BaseEntity>({
                 <Menu.Item
                   color="red"
                   leftSection={<IconTrash size={16} />}
-                  onClick={() => setDeleteRecords(selectedRecords)}
+                  onClick={runFromBulkMenu(() => setDeleteRecords(selectedRecords))}
                 >
                   Löschen
                 </Menu.Item>
@@ -548,10 +552,9 @@ export function DataTable<T extends BaseEntity>({
   );
 
   const closeEdit = () => setEditRecord(null);
-  const closeDelete = () => {
-    setDeleteRecords([]);
-    setSelectedRecords([]);
-  };
+  const closeDelete = () => setDeleteRecords([]);
+  const deselect = (deleted: T[]) =>
+    setSelectedRecords((current) => current.filter((record) => !deleted.some(({ id }) => id === record.id)));
 
   const emptyText = noRecordsText ?? (query.trim() ? `Keine Treffer für „${query.trim()}“` : "Keine Einträge gefunden");
 
@@ -608,7 +611,7 @@ export function DataTable<T extends BaseEntity>({
         </Alert>
       )}
 
-      {(isLoading || isRefetching) && (
+      {isLoading && (
         <Stack>
           <Skeleton height={40} />
           {Array(nested ? 2 : 5)
@@ -619,13 +622,13 @@ export function DataTable<T extends BaseEntity>({
         </Stack>
       )}
 
-      {!isLoading && !isRefetching && nested && !isError && sortedData.length === 0 && (
+      {!isLoading && nested && !isError && sortedData.length === 0 && (
         <Text size="sm" c="dimmed">
           {emptyText}
         </Text>
       )}
 
-      {!isLoading && !isRefetching && (!isError || allData !== undefined) && !(nested && sortedData.length === 0) && (
+      {!isLoading && (!isError || allData !== undefined) && !(nested && sortedData.length === 0) && (
         <>
           {!cardsOnly && (
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
@@ -751,6 +754,7 @@ export function DataTable<T extends BaseEntity>({
         {deleteRecords.length > 0 && (
           <DeleteModal<T>
             onClose={closeDelete}
+            onDeleted={deselect}
             queryKey={queryKey}
             connectedQueryKeys={connectedQueryKeys}
             apiPath={effectiveMutationApiPath}

@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 
 export interface DeleteModalProps<T> {
   onClose: () => void;
+  onDeleted?: (records: T[]) => void;
   queryKey: (string | number)[];
   connectedQueryKeys?: (string | number)[][];
   apiPath: string;
@@ -26,6 +27,7 @@ export function DeleteModal<T extends BaseEntity>({
   connectedQueryKeys,
   apiPath,
   onClose,
+  onDeleted,
   selectedRecords,
   confirmMessage,
   recordLabel,
@@ -84,6 +86,7 @@ export function DeleteModal<T extends BaseEntity>({
             const reasons = results.flatMap((result) =>
               result.status === "rejected" ? [result.reason] : [],
             );
+            onDeleted?.(records.filter((_, index) => results[index].status === "fulfilled"));
             setRecords(
               records.filter((_, index) => results[index].status === "rejected"),
             );
