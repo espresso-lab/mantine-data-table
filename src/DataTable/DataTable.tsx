@@ -345,7 +345,11 @@ export function DataTable<T extends BaseEntity>({
     ? sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : sortedData;
 
-  const [selectedRecords, setSelectedRecords] = useState<T[]>([]);
+  const [pickedRecords, setSelectedRecords] = useState<T[]>([]);
+  const selectedRecords = pickedRecords.flatMap((picked) => {
+    const current = (Array.isArray(allData) ? allData : []).find(({ id }) => id === picked.id);
+    return current && (isRecordSelectable?.(current) ?? true) ? [current] : [];
+  });
   const [selectionTab, setSelectionTab] = useState(activeTab);
   const [editRecord, setEditRecord] = useState<T | null>(null);
   const [deleteRecords, setDeleteRecords] = useState<T[]>([]);
