@@ -512,6 +512,9 @@ export default function App() {
             entityName="Benutzer"
             recordLabel={(record) => record.name}
             search={{ placeholder: "Name oder E-Mail suchen" }}
+            toolbar={<Switch label="Archivierte anzeigen (3)" />}
+            isRecordClickable={(record) => record.active}
+            isRecordSelectable={(record) => record.active}
             rowActions={(record) => [
               { icon: <IconMail size={16} />, label: "E-Mail senden", onClick: () => alert(`E-Mail an: ${record.email}`) },
               ...(record.active

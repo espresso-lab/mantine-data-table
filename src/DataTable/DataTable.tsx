@@ -150,6 +150,10 @@ export interface DataTableProps<T extends BaseEntity> {
     };
   };
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
+  /** Rows that `onRowClick` opens; the others keep the default cursor and ignore a click. */
+  isRecordClickable?: (record: T) => boolean;
+  /** Rows offered for selection; the others cannot be picked for bulk actions. */
+  isRecordSelectable?: (record: T) => boolean;
   mobileCards?: boolean;
   noRecordsText?: string;
   deleteConfirmMessage?: (records: T[]) => React.ReactNode;
@@ -202,6 +206,8 @@ export function DataTable<T extends BaseEntity>({
   autoPoll,
   rowExpansion,
   onRowClick,
+  isRecordClickable,
+  isRecordSelectable,
   mobileCards = false,
   noRecordsText,
   deleteConfirmMessage,
@@ -465,6 +471,13 @@ export function DataTable<T extends BaseEntity>({
     ...(showsRowActions ? [rowActionsColumn] : []),
   ];
 
+  const clickable = (record: T) => !!onRowClick && (isRecordClickable?.(record) ?? true);
+  const handleRowClick =
+    onRowClick &&
+    ((params: { record: T; index: number; event: React.MouseEvent }) => {
+      if (clickable(params.record)) onRowClick(params);
+    });
+
   const cardActionsOf = (record: T) => {
     const own = rowActionsOf(record);
     const bulk: RowAction[] = (actions ?? [])
@@ -592,7 +605,7 @@ export function DataTable<T extends BaseEntity>({
       )}
 
       {(searchConfig || toolbar) && (
-        <Group gap="xs" wrap="wrap" align="flex-end">
+        <Group gap="xs" wrap="wrap" align="center">
           {searchConfig && (
             <SearchInput value={query} onChange={handleQueryChange} placeholder={searchConfig.placeholder} />
           )}
@@ -644,6 +657,7 @@ export function DataTable<T extends BaseEntity>({
               {...(selection && {
                 selectedRecords,
                 onSelectedRecordsChange: setSelectedRecords,
+                ...(isRecordSelectable && { isRecordSelectable: (record: T) => isRecordSelectable(record) }),
               })}
               {...(pagination &&
                 sortedData.length && {
@@ -672,7 +686,8 @@ export function DataTable<T extends BaseEntity>({
               })}
               columns={columns}
               noRecordsText={emptyText}
-              onRowClick={onRowClick}
+              onRowClick={handleRowClick}
+              rowStyle={(record) => (onRowClick && !clickable(record) ? { cursor: "default" } : undefined)}
               style={{ containerType: "inline-size", ...(onRowClick && { cursor: "pointer" }) }}
             />
           </Box>
@@ -683,7 +698,8 @@ export function DataTable<T extends BaseEntity>({
               <MobileCardList
                 records={records}
                 fields={expansionFields}
-                onRowClick={onRowClick}
+                onRowClick={handleRowClick}
+                isRecordClickable={isRecordClickable}
                 noRecordsText={emptyText}
                 variant={nested ? "nested" : "surface"}
                 sort={nested ? undefined : {

@@ -17,6 +17,7 @@ interface MobileCardListProps<T extends BaseEntity> {
   records: T[];
   fields: Field<T>[];
   onRowClick?: (params: { record: T; index: number; event: React.MouseEvent }) => void;
+  isRecordClickable?: (record: T) => boolean;
   cardActions?: (record: T) => RowActionsProps;
   noRecordsText?: string;
   pagination?: {
@@ -73,6 +74,7 @@ export function MobileCardList<T extends BaseEntity>({
   records,
   fields,
   onRowClick,
+  isRecordClickable,
   cardActions,
   noRecordsText = "Keine Einträge gefunden",
   pagination,
@@ -210,7 +212,9 @@ export function MobileCardList<T extends BaseEntity>({
             >
               <Box
                 w="100%"
-                style={{ cursor: onRowClick || canExpand ? "pointer" : "default" }}
+                style={{
+                  cursor: (onRowClick && (isRecordClickable?.(record) ?? true)) || canExpand ? "pointer" : "default",
+                }}
                 onClick={(e: React.MouseEvent) => {
                   if (canExpand && !onRowClick) {
                     toggleExpansion(recordKey);
