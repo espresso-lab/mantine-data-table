@@ -467,12 +467,13 @@ export function DataTable<T extends BaseEntity>({
 
   const cardActionsOf = (record: T) => {
     const own = rowActionsOf(record);
-    const bulk: RowAction[] = (actions ?? []).map((action) => ({
-      label: action.label,
-      icon: action.icon,
-      onClick: () => action.onClick([record]),
-      disabled: action.disabled?.([record]) ?? false,
-    }));
+    const bulk: RowAction[] = (actions ?? [])
+      .filter((action) => !action.disabled?.([record]) && !own.actions.some((rowAction) => rowAction.label === action.label))
+      .map((action) => ({
+        label: action.label,
+        icon: action.icon,
+        onClick: () => action.onClick([record]),
+      }));
     return {
       ...own,
       onEdit: hasUpdateField && canEditRecord(record) ? () => setEditRecord(record) : undefined,
