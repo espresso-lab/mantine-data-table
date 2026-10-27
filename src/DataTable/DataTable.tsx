@@ -474,11 +474,7 @@ export function DataTable<T extends BaseEntity>({
         icon: action.icon,
         onClick: () => action.onClick([record]),
       }));
-    return {
-      ...own,
-      onEdit: hasUpdateField && canEditRecord(record) ? () => setEditRecord(record) : undefined,
-      actions: [...own.actions, ...bulk],
-    };
+    return { ...own, name: recordLabel?.(record), actions: [...own.actions, ...bulk] };
   };
 
   const bulkDeletable = hasDeleteField && selectedRecords.length > 0 && selectedRecords.every(canDeleteRecord);

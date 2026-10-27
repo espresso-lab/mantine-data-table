@@ -11,7 +11,7 @@ import { QueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { sortData } from "./utils/sort";
 import { DataTable as MantineDataTable, DataTableSortStatus } from "mantine-datatable";
-import { IconSearch, IconUsers, IconShield, IconUserCog, IconMail, IconChevronRight } from "@tabler/icons-react";
+import { IconSearch, IconUsers, IconShield, IconUserCog, IconMail, IconChevronRight, IconTrash } from "@tabler/icons-react";
 
 interface DemoItem {
   id: number;
@@ -514,6 +514,9 @@ export default function App() {
             search={{ placeholder: "Name oder E-Mail suchen" }}
             rowActions={(record) => [
               { icon: <IconMail size={16} />, label: "E-Mail senden", onClick: () => alert(`E-Mail an: ${record.email}`) },
+              ...(record.active
+                ? []
+                : [{ icon: <IconTrash size={16} />, label: "Endgültig löschen", color: "red", onClick: () => alert(`Endgültig löschen: ${record.name}`) }]),
             ]}
             queryKey={["demo-users"]}
             apiPath="/users"
