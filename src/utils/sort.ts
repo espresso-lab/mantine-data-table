@@ -62,12 +62,18 @@ function toSortValue(value: unknown, columnType: ColumnType): string | number | 
       const num = parseFloat(String(value).trim());
       return isNaN(num) ? null : num;
     }
-    case "string":
-      return (typeof value === "string" ? value : String(value)).toLowerCase().trim();
     default:
-      return String(value).toLowerCase().trim();
+      return String(value).trim();
   }
 }
+
+const textOrder = new Intl.Collator("de", { numeric: true });
+
+const compareSortValues = (a: string | number, b: string | number): number => {
+  if (typeof a === "string" && typeof b === "string") return textOrder.compare(a, b);
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
+};
 
 export const sortData = <T>(
   data: T[],
@@ -96,8 +102,7 @@ export const sortData = <T>(
     if (aSortValue === null) return direction === "asc" ? 1 : -1;
     if (bSortValue === null) return direction === "asc" ? -1 : 1;
 
-    if (aSortValue < bSortValue) return direction === "asc" ? -1 : 1;
-    if (aSortValue > bSortValue) return direction === "asc" ? 1 : -1;
-    return 0;
+    const order = compareSortValues(aSortValue, bSortValue);
+    return direction === "asc" ? order : -order;
   });
 };
