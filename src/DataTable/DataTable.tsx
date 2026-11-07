@@ -227,13 +227,18 @@ export function DataTable<T extends BaseEntity>({
   const serverPaging: ServerPaging<T> | undefined =
     paginationOptions.server === true ? {} : paginationOptions.server || undefined;
   const server = !!serverPaging;
-  const pageState = usePageState(paginationOptions);
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
 
   const activeTab =
     controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+
+  const currentTab = tabs?.find((tab) => tab.value === activeTab);
+  const currentTabParams = currentTab?.queryParams || {};
+  const effectiveApiPath = currentTab?.apiPath ?? apiPath;
+  const effectiveMutationApiPath = currentTab?.mutationApiPath ?? mutationApiPath ?? effectiveApiPath;
+  const pageState = usePageState(paginationOptions, JSON.stringify([effectiveApiPath, queryParams ?? {}, currentTabParams]));
 
   const handleTabChange = (value: string | null) => {
     if (controlledActiveTab === undefined) {
@@ -244,11 +249,6 @@ export function DataTable<T extends BaseEntity>({
       onActiveTabChange(value);
     }
   };
-
-  const currentTab = tabs?.find((tab) => tab.value === activeTab);
-  const currentTabParams = currentTab?.queryParams || {};
-  const effectiveApiPath = currentTab?.apiPath ?? apiPath;
-  const effectiveMutationApiPath = currentTab?.mutationApiPath ?? mutationApiPath ?? effectiveApiPath;
 
   const searchConfig: SearchConfig<T> | undefined = search === true ? {} : search || undefined;
   const [internalQuery, setInternalQuery] = useState("");
