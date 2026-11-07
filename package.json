@@ -74,5 +74,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
     "mantine-datatable": "^9.4.0"
+  },
+  "overrides": {
+    "minimatch@^10": "^11.0.5"
   }
 }
