@@ -1,4 +1,4 @@
-import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Popover, Select, Stack, Text } from "@mantine/core";
+import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Popover, ScrollArea, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
 import { Field } from "./DataTable";
 import React, { useState } from "react";
@@ -107,7 +107,7 @@ export function MobileCardList<T extends BaseEntity>({
   const [filterOpen, setFilterOpen] = useState(false);
 
   const sortOptions = listFields
-    .filter((f) => f.column.sortable !== false && (f.column.title == null || typeof f.column.title === "string"))
+    .filter((f) => f.column.sortable === true && (f.column.title == null || typeof f.column.title === "string"))
     .reduce<{ value: string; label: string }[]>((acc, f) => {
       const value = (f.column.accessor ?? f.id) as string;
       if (!acc.some((o) => o.value === value)) {
@@ -144,7 +144,15 @@ export function MobileCardList<T extends BaseEntity>({
             </>
           )}
           {filterFields.length > 0 && (
-            <Popover opened={filterOpen} onChange={setFilterOpen} position="bottom-end" withArrow shadow="md" trapFocus>
+            <Popover
+              opened={filterOpen}
+              onChange={setFilterOpen}
+              position="bottom-end"
+              middlewares={{ flip: true, shift: true, size: { padding: 8 } }}
+              withArrow
+              shadow="md"
+              trapFocus
+            >
               <Popover.Target>
                 <Indicator inline disabled={!hasActiveFilter} withBorder>
                   <ActionIcon
@@ -159,25 +167,27 @@ export function MobileCardList<T extends BaseEntity>({
                 </Indicator>
               </Popover.Target>
               <Popover.Dropdown p={0}>
-                <Accordion multiple defaultValue={defaultOpenFilters} style={{ minWidth: 260, maxWidth: 320 }}>
-                  {filterFields.map((f) => (
-                    <Accordion.Item key={f.id} value={f.id}>
-                      <Accordion.Control>
-                        <Group gap="xs">
-                          <Text fw={600} fz="sm">{(f.column.title as string) ?? f.id}</Text>
-                          {f.column.filtering && (
-                            <Box w={8} h={8} bg="var(--mantine-primary-color-filled)" style={{ borderRadius: "50%" }} />
-                          )}
-                        </Group>
-                      </Accordion.Control>
-                      <Accordion.Panel>
-                        {typeof f.column.filter === "function"
-                          ? f.column.filter({ close: () => setFilterOpen(false) })
-                          : f.column.filter}
-                      </Accordion.Panel>
-                    </Accordion.Item>
-                  ))}
-                </Accordion>
+                <ScrollArea.Autosize mah="inherit">
+                  <Accordion multiple defaultValue={defaultOpenFilters} style={{ minWidth: 260, maxWidth: 320 }}>
+                    {filterFields.map((f) => (
+                      <Accordion.Item key={f.id} value={f.id}>
+                        <Accordion.Control>
+                          <Group gap="xs">
+                            <Text fw={600} fz="sm">{(f.column.title as string) ?? f.id}</Text>
+                            {f.column.filtering && (
+                              <Box w={8} h={8} bg="var(--mantine-primary-color-filled)" style={{ borderRadius: "50%" }} />
+                            )}
+                          </Group>
+                        </Accordion.Control>
+                        <Accordion.Panel>
+                          {typeof f.column.filter === "function"
+                            ? f.column.filter({ close: () => setFilterOpen(false) })
+                            : f.column.filter}
+                        </Accordion.Panel>
+                      </Accordion.Item>
+                    ))}
+                  </Accordion>
+                </ScrollArea.Autosize>
               </Popover.Dropdown>
             </Popover>
           )}

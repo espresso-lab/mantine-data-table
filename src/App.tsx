@@ -258,6 +258,7 @@ export default function App() {
       column: {
         accessor: "name",
         title: "Name",
+        sortable: true,
         render: (record) => {
           if (!enableRowExpansion) return <Text fz="sm">{record.name}</Text>;
           const expandable = !enableConditionalExpansion || subEntries(record).length > 0;
@@ -291,7 +292,7 @@ export default function App() {
         },
       },
     },
-    { id: "email", list: true, create: false, update: false, delete: false, column: { accessor: "email", title: "E-Mail" } },
+    { id: "email", list: true, create: false, update: false, delete: false, column: { accessor: "email", title: "E-Mail", sortable: true } },
     {
       id: "role",
       list: true,
@@ -330,6 +331,7 @@ export default function App() {
       column: {
         accessor: "date",
         title: "Datum",
+        sortable: true,
         render: (record) => <Text fz="sm">{new Date(record.date).toLocaleDateString("de-DE")}</Text>,
         ...(enableColumnFilter && {
           filter: ({ close }: { close: () => void }) => (
