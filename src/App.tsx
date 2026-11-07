@@ -2,7 +2,8 @@ import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "mantine-datatable/styles.css";
 import { DatePicker } from "@mantine/dates";
-import { Badge, Box, Button, Checkbox, Container, Divider, Group, MantineProvider, Stack, Switch, Tabs, Text, TextInput, Title } from "@mantine/core";
+import { Badge, Box, Button, Checkbox, Container, Divider, Group, MantineProvider, SegmentedControl, Stack, Switch, Tabs, Text, TextInput, Title } from "@mantine/core";
+import type { PageRequest } from "./utils/pagination";
 import { MobileCardList } from "./DataTable/MobileCardList";
 import { SubTable, SubTableColumn } from "./DataTable/SubTable";
 import { DataTable, Field } from "./DataTable/DataTable";
@@ -75,20 +76,54 @@ function subEntries(record: DemoItem): SubEntry[] {
 }
 
 // DataTable fetches from an API, so the demo serves its records from an in-memory mock under /demo-api.
-const demoApiRecords: DemoItem[] = demoData.map((item) => ({ ...item }));
+const ROLES = ["Admin", "Manager", "User"];
+const demoApiRecords: DemoItem[] = [
+  ...demoData.map((item) => ({ ...item })),
+  ...Array.from({ length: 48 }, (_, index) => ({
+    id: 13 + index,
+    name: `Testnutzer ${13 + index}`,
+    email: `test${13 + index}@example.com`,
+    role: ROLES[index % 3],
+    active: index % 4 !== 0,
+    date: `2026-08-${String((index % 28) + 1).padStart(2, "0")}`,
+  })),
+];
 
 const demoApiResponse = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 
+/** The records a server would page: searched, sorted and cut to one page counted from `firstPage`. */
+function demoPage(params: URLSearchParams, firstPage: number, search: string | null, sort: string | null, direction: string | null) {
+  const query = (search ?? "").toLowerCase();
+  const found = demoApiRecords.filter(
+    (item) => !query || item.name.toLowerCase().includes(query) || item.email.toLowerCase().includes(query),
+  );
+  const sorted = sort ? sortData(found, sort as keyof DemoItem, direction === "asc" ? "asc" : "desc") : found;
+  const size = Number(params.get("size") ?? 15);
+  const start = (Number(params.get("page") ?? firstPage) - firstPage) * size;
+  return { items: sorted.slice(start, start + size), total: sorted.length };
+}
+
 const browserFetch = window.fetch.bind(window);
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+  const params = url.searchParams;
+  if (!url.pathname.startsWith("/demo-api/")) return browserFetch(input, init);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  if (url.pathname === "/demo-api/spring/users") {
+    const [sort, direction] = (params.get("sort") ?? "").split(",");
+    const { items, total } = demoPage(params, 0, params.get("q"), sort || null, direction || null);
+    return demoApiResponse({ content: items, totalElements: total });
+  }
   const match = url.pathname.match(/^\/demo-api\/users(?:\/(\d+))?$/);
   if (!match) return browserFetch(input, init);
   if (!match[1] && init?.method === "POST") {
     const created = { ...JSON.parse(String(init.body)), id: Math.max(0, ...demoApiRecords.map((item) => item.id)) + 1 };
     demoApiRecords.push(created);
     return demoApiResponse(created, 201);
+  }
+  if (!match[1] && params.has("page")) {
+    return demoApiResponse(demoPage(params, 1, params.get("search"), params.get("sort"), params.get("direction")));
   }
   if (!match[1]) return demoApiResponse(demoApiRecords);
   const record = demoApiRecords.find((item) => item.id === Number(match[1]));
@@ -100,6 +135,27 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   return demoApiResponse(record);
 };
+
+interface Booking {
+  id: number;
+  date: string;
+  description: string;
+  amount: number;
+}
+
+const bookings: Booking[] = Array.from({ length: 87 }, (_, index) => ({
+  id: index + 1,
+  date: `2026-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 27) + 1).padStart(2, "0")}`,
+  description: index % 3 === 0 ? "Hausgeld" : index % 3 === 1 ? "Überweisung Eingang" : "Kontoführungsgebühr",
+  amount: Math.round(((index * 37) % 900) * 100 + 1250) / 100,
+}));
+
+const bookingColumns: SubTableColumn<Booking>[] = [
+  { accessor: "id", title: "Nr.", textAlign: "right" },
+  { accessor: "date", title: "Datum", render: (booking) => new Date(booking.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) },
+  { accessor: "description", title: "Buchung" },
+  { accessor: "amount", title: "Betrag", textAlign: "right", render: (booking) => eur(booking.amount) },
+];
 
 const demoQueryClient = new QueryClient();
 
@@ -142,6 +198,55 @@ export default function App() {
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
   const [activeTab, setActiveTab] = useState<string | null>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [tableMode, setTableMode] = useState("browser");
+  const [fixedSize, setFixedSize] = useState(false);
+  const [outsidePage, setOutsidePage] = useState(false);
+  const [keptPage, setKeptPage] = useState(1);
+  const pagingOptions = {
+    ...(fixedSize && { pageSizes: [25] }),
+    ...(outsidePage && { page: keptPage, onPageChange: setKeptPage }),
+  };
+  const springServer = {
+    query: ({ page, size, sort, direction, search }: PageRequest) => ({
+      page: page - 1,
+      size,
+      sort: `${sort},${direction}`,
+      q: search,
+    }),
+    read: (body: unknown) => {
+      const { content, totalElements } = body as { content: DemoItem[]; totalElements: number };
+      return { items: content, total: totalElements };
+    },
+  };
+  const tablePagination =
+    tableMode === "none"
+      ? false
+      : tableMode === "browser"
+        ? pagingOptions
+        : { ...pagingOptions, server: tableMode === "spring" ? springServer : true };
+
+  const [subMode, setSubMode] = useState("browser");
+  const [subMobile, setSubMobile] = useState(false);
+  const [subPage, setSubPage] = useState(1);
+  const [subSize, setSubSize] = useState(20);
+  const subPagination =
+    subMode === "server"
+      ? {
+          page: subPage,
+          totalRecords: bookings.length,
+          recordsPerPage: subSize,
+          onPageChange: setSubPage,
+          recordsPerPageOptions: [20, 40],
+          onRecordsPerPageChange: (size: number) => {
+            setSubSize(size);
+            setSubPage(1);
+          },
+        }
+      : subMode === "sizes"
+        ? { pageSizes: [20, 40], pageSize: 20 }
+        : true;
+  const subRecords = subMode === "server" ? bookings.slice((subPage - 1) * subSize, subPage * subSize) : bookings;
 
   const fields: Field<DemoItem>[] = [
     {
@@ -503,6 +608,22 @@ export default function App() {
 
         <Divider my="xl" />
 
+        <Group gap="lg" mb="md" wrap="wrap">
+          <SegmentedControl
+            value={tableMode}
+            onChange={setTableMode}
+            data={[
+              { value: "none", label: "Ohne Seiten" },
+              { value: "browser", label: "Browser" },
+              { value: "server", label: "Server" },
+              { value: "spring", label: "Server (Spring)" },
+            ]}
+          />
+          <Switch label="Feste Seitengröße 25" checked={fixedSize} onChange={(e) => setFixedSize(e.currentTarget.checked)} />
+          <Switch label="Seite von außen" checked={outsidePage} onChange={(e) => setOutsidePage(e.currentTarget.checked)} />
+          {outsidePage && <Text size="sm" c="dimmed">Seite {keptPage}</Text>}
+        </Group>
+
         <DataTableProvider baseUrl="/demo-api" queryClient={demoQueryClient} getHeaders={demoHeaders}>
           <DataTable<DemoItem>
             title="Benutzer"
@@ -521,12 +642,13 @@ export default function App() {
                 ? []
                 : [{ icon: <IconTrash size={16} />, label: "Endgültig löschen", color: "red", onClick: () => alert(`Endgültig löschen: ${record.name}`) }]),
             ]}
-            queryKey={["demo-users"]}
-            apiPath="/users"
+            queryKey={["demo-users", tableMode]}
+            apiPath={tableMode === "spring" ? "/spring/users" : "/users"}
+            mutationApiPath="/users"
             fields={dataTableFields}
             defaultSort={{ field: "name", direction: "asc" }}
             selection={enableSelection}
-            pagination={enablePagination}
+            pagination={tablePagination}
             mobileCards={enableMobileCards}
             {...(enableOnRowClick && {
               onRowClick: ({ record }: { record: DemoItem }) => alert(`Clicked: ${record.name}`),
@@ -542,6 +664,47 @@ export default function App() {
             })}
           />
         </DataTableProvider>
+
+        <Divider my="xl" />
+
+        <Stack gap="md">
+          <Title order={4}>SubTable mit Seiten</Title>
+          <Group gap="lg" wrap="wrap">
+            <SegmentedControl
+              value={subMode}
+              onChange={(mode) => {
+                setSubMode(mode);
+                setSubPage(1);
+              }}
+              data={[
+                { value: "browser", label: "Browser" },
+                { value: "sizes", label: "Browser, 20 oder 40" },
+                { value: "server", label: "Server" },
+              ]}
+            />
+            <Switch label="Karten (Telefon)" checked={subMobile} onChange={(e) => setSubMobile(e.currentTarget.checked)} />
+          </Group>
+          <SubTable<Booking>
+            mobile={subMobile}
+            columns={bookingColumns}
+            records={subRecords}
+            idAccessor="id"
+            withTableBorder
+            borderRadius="md"
+            noRecordsText="Keine Buchungen"
+            pagination={subPagination}
+          />
+          <SubTable<Booking>
+            mobile={subMobile}
+            columns={bookingColumns}
+            records={[]}
+            idAccessor="id"
+            withTableBorder
+            borderRadius="md"
+            noRecordsText="Keine Buchungen"
+            pagination
+          />
+        </Stack>
       </Container>
     </MantineProvider>
   );

@@ -1,6 +1,7 @@
-import { QueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useDataTable } from "./useDataTable.ts";
 import type { GetHeaders } from "../Context/DataTableContext.tsx";
+import { defaultRead, type Page } from "../utils/pagination.ts";
 
 export interface FieldViolation {
   field: string;
@@ -149,6 +150,31 @@ export function useGetAll<T extends BaseEntity>(
     queryKey: toKey(queryKey),
     queryFn: () => getAll<T>(`${baseUrl}${apiPath}`, getHeaders),
     enabled,
+  });
+}
+
+export async function getPage<T extends BaseEntity>(
+  path: string,
+  getHeaders: GetHeaders,
+  read: (body: unknown) => Page<T> = defaultRead,
+): Promise<Page<T>> {
+  const resp = await fetchWithError(path, { method: "GET", headers: await getHeaders() });
+  return read(await resp.json());
+}
+
+/** One page from the server; the page shown stays until the next one has arrived. */
+export function useGetPage<T extends BaseEntity>(
+  apiPath: string,
+  queryKey: Array<string | number>,
+  enabled: boolean = true,
+  read?: (body: unknown) => Page<T>,
+) {
+  const { baseUrl, getHeaders } = useDataTable();
+  return useQuery<Page<T>>({
+    queryKey: toKey(queryKey),
+    queryFn: () => getPage<T>(`${baseUrl}${apiPath}`, getHeaders, read),
+    enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

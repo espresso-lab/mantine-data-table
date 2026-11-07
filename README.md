@@ -148,7 +148,7 @@ A field describes both a table column and a form input.
 | `rowActions` | `(record) => RowAction[]` — further row actions, shown before *Bearbeiten*/*Löschen* (more than two collapse into a ⋯ menu). `variant: "light"` with a role `color` turns one into a status that opens the record (a green check, a red cross). |
 | `selection` | Row checkboxes; once rows are selected, „n ausgewählt" opens the bulk menu with your `actions` and *Löschen*. |
 | `actions` | Bulk actions on the selected rows; on phones they also appear in each card's menu. |
-| `pagination` | Client-side pagination. |
+| `pagination` | `true` pages in the browser; options set page sizes, the first size, a page you keep, or `server` to load one page at a time (see *Pagination*). |
 | `mobileCards` | Render a card list instead of the table below the `sm` breakpoint. |
 | `tabs` | Switch between datasets, each with its own query params and api path. |
 | `rowExpansion` | Expandable rows (see below). |
@@ -206,6 +206,67 @@ import { BreadcrumbProvider } from "@espresso-lab/mantine-data-table";
 A page passes only the ancestors between the root and itself in `breadcrumbs`. Below the `sm`
 breakpoint a trail of more than two crumbs keeps to one line: the earlier levels move into a ⋯ menu
 and long labels are truncated.
+
+## Pagination
+
+`DataTable` and `SubTable` page the same way and show the same footer — „1–15 von 120“, the pages and
+„Einträge pro Seite“, as a row under the table on desktop and centred under the cards on a phone. The page
+size a user picks holds for every table that offers it. One size, or none, hides the choice.
+
+**In the browser.** The table has all records and shows one page of them:
+
+```tsx
+<DataTable pagination … />
+<DataTable pagination={{ pageSizes: [25, 50, 100], pageSize: 25 }} … />
+<SubTable pagination records={entries} … />
+```
+
+**From the server.** `DataTable` asks `apiPath` for one page at a time — `page` (from 1), `size`, `sort`
+and `direction` of the sorted column, and `search` while its own search field holds text — and reads
+`{ items, total }`. The server then sorts and searches; `filters` are not applied in the browser, pass what
+the server filters by as `queryParams`. The page shown stays until the next one has arrived.
+
+```tsx
+<DataTable pagination={{ server: true }} apiPath="/contacts" search … />
+```
+
+`query` builds the request and `read` reads the answer of any other API, here Spring Data
+(`page` from 0, `sort=name,asc`, `content` and `totalElements`):
+
+```tsx
+<DataTable
+  pagination={{
+    server: {
+      query: ({ page, size, sort, direction, search }) => ({ page: page - 1, size, sort: `${sort},${direction}`, q: search }),
+      read: (body) => {
+        const { content, totalElements } = body as { content: Contact[]; totalElements: number };
+        return { items: content, total: totalElements };
+      },
+    },
+  }}
+  …
+/>
+```
+
+A `SubTable` shows what you load: pass the page as `records` and where it stands as `pagination`.
+
+```tsx
+const [page, setPage] = useState(1);
+const { data } = useQuery({ queryKey: ["changes", page], queryFn: () => loadChanges(page, 50) });
+
+<SubTable
+  records={data?.items}
+  pagination={{ page, totalRecords: data?.total ?? 0, recordsPerPage: 50, onPageChange: setPage }}
+  …
+/>;
+```
+
+**A page you keep.** `page` and `onPageChange` hand the page to you, to keep it in the URL or reset it from
+outside; the table still moves to page 1 when the sort, the search or the tab changes.
+
+```tsx
+<DataTable pagination={{ server: true, page: search.page, onPageChange: (page) => navigate({ search: { page } }) }} … />
+```
 
 ## Row expansion
 

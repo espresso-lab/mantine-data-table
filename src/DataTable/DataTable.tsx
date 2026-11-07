@@ -15,15 +15,16 @@ import {
   UnstyledButton,
   VisuallyHidden,
 } from "@mantine/core";
-import { useElementSize, useMediaQuery } from "@mantine/hooks";
-import { BaseEntity, useGetAll } from "../Hooks/useApi";
+import { useDebouncedCallback, useElementSize, useMediaQuery } from "@mantine/hooks";
+import { BaseEntity, useGetAll, useGetPage } from "../Hooks/useApi";
 import React, { useEffect, useRef, useState } from "react";
 import { CreateModal } from "./CreateModal";
 import { IconChevronDown, IconChevronRight, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { DataTable as MantineDataTable, DataTableColumn, DataTableSortStatus, getValueAtPath } from "mantine-datatable";
 import { UpdateModal } from "./UpdateModal.tsx";
 import { DeleteModal } from "./DeleteModal.tsx";
-import { usePersistentState } from "../Hooks/usePersistentState.ts";
+import { usePageState } from "../Hooks/usePageState.ts";
+import { DataTablePagination, defaultQuery, footerProps, pageOf, pagingOf, ServerPaging } from "../utils/pagination";
 import { sortData } from "../utils/sort";
 import { applyFilters, Filter } from "../utils/filter";
 import { matchesSearch } from "../utils/search";
@@ -123,7 +124,14 @@ export interface DataTableProps<T extends BaseEntity> {
   editAction?: (record: T) => { label?: string; icon?: React.ReactNode };
   onUpdate?: (values: T, record: T) => Promise<unknown>;
   selection?: boolean;
-  pagination?: boolean;
+  /**
+   * `true` loads every record and pages them in the browser; options set the page sizes, the first size and a
+   * page the caller keeps. With `server` the table asks `apiPath` for one page at a time — by default `page`
+   * (from 1), `size`, `sort` and `direction` of the sorted column, and `search` while its own search field holds
+   * text — and reads `{ items, total }`; `query` and `read` adapt both to another API. The server then sorts and
+   * searches; `filters` are not applied in the browser, pass what the server filters by as `queryParams`.
+   */
+  pagination?: boolean | DataTablePagination<T>;
   steps?: StepConfig[];
   fields: Field<T>[];
   defaultSort?: {
@@ -160,9 +168,6 @@ export interface DataTableProps<T extends BaseEntity> {
   editRecordId?: string | null;
   onEditRecordIdChange?: (id: string | null) => void;
 }
-
-const PAGE_SIZES = [10, 15, 50, 100, 500];
-
 
 export function DataTable<T extends BaseEntity>({
   title,
@@ -217,6 +222,11 @@ export function DataTable<T extends BaseEntity>({
   const isMobile = useMediaQuery("(max-width: 48em)");
   const { ref: rootRef, width: rootWidth } = useElementSize();
   const cardsOnly = nested && mobileCards && rootWidth > 0 && rootWidth < 600;
+  const paginationOptions: DataTablePagination<T> = typeof pagination === "object" ? pagination : {};
+  const serverPaging: ServerPaging<T> | undefined =
+    paginationOptions.server === true ? {} : paginationOptions.server || undefined;
+  const server = !!serverPaging;
+  const pageState = usePageState(paginationOptions);
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(
     defaultTab || (tabs && tabs.length > 0 ? tabs[0].value : null),
   );
@@ -228,6 +238,7 @@ export function DataTable<T extends BaseEntity>({
     if (controlledActiveTab === undefined) {
       setInternalActiveTab(value);
     }
+    pageState.setPage(1);
     if (onActiveTabChange) {
       onActiveTabChange(value);
     }
@@ -237,7 +248,37 @@ export function DataTable<T extends BaseEntity>({
   const currentTabParams = currentTab?.queryParams || {};
   const effectiveApiPath = currentTab?.apiPath ?? apiPath;
   const effectiveMutationApiPath = currentTab?.mutationApiPath ?? mutationApiPath ?? effectiveApiPath;
-  const allQueryParams = { ...queryParams, ...currentTabParams };
+
+  const searchConfig: SearchConfig<T> | undefined = search === true ? {} : search || undefined;
+  const [internalQuery, setInternalQuery] = useState("");
+  const query = searchConfig?.value ?? internalQuery;
+  const ownsSearch = !!searchConfig && !searchConfig.onChange;
+  const [serverQuery, setServerQuery] = useState("");
+  const searchServer = useDebouncedCallback((value: string) => {
+    setServerQuery(value);
+    pageState.setPage(1);
+  }, 300);
+  const searchAccessors =
+    searchConfig?.accessors ??
+    fields.filter((field) => field.list && field.column && !field.column.hidden).map((field) => String(field.column.accessor));
+
+  const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
+    columnAccessor: defaultSort?.field ?? fields[0].id,
+    direction: defaultSort?.direction ?? "desc",
+  });
+
+  const allQueryParams: Record<string, string | number | boolean | null | undefined> = {
+    ...queryParams,
+    ...currentTabParams,
+    ...(serverPaging &&
+      (serverPaging.query ?? defaultQuery)({
+        page: pageState.page,
+        size: pageState.recordsPerPage,
+        sort: String(sortStatus.columnAccessor),
+        direction: sortStatus.direction,
+        search: ownsSearch && serverQuery ? serverQuery : undefined,
+      })),
+  };
 
   const queryString: string = allQueryParams
     ? "?" +
@@ -249,26 +290,18 @@ export function DataTable<T extends BaseEntity>({
 
   const effectiveQueryKey = activeTab ? [...queryKey, activeTab] : queryKey;
 
-  const {
-    data: allData,
-    isLoading,
-    isError,
-    refetch,
-  } = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey);
+  const list = useGetAll<T>(effectiveApiPath + queryString, effectiveQueryKey, !server);
+  const paged = useGetPage<T>(effectiveApiPath + queryString, [...effectiveQueryKey, queryString], server, serverPaging?.read);
+  const { isLoading, isError, refetch } = server ? paged : list;
+  const allData = server ? paged.data?.items : list.data;
 
-  const searchConfig: SearchConfig<T> | undefined = search === true ? {} : search || undefined;
-  const [internalQuery, setInternalQuery] = useState("");
-  const query = searchConfig?.value ?? internalQuery;
-  const searchesLocally = !!searchConfig && !searchConfig.onChange;
-  const searchAccessors =
-    searchConfig?.accessors ??
-    fields.filter((field) => field.list && field.column && !field.column.hidden).map((field) => String(field.column.accessor));
-
-  const filteredData = applyFilters(Array.isArray(allData) ? allData : [], filters).filter(
-    (record) =>
-      !searchesLocally ||
-      (searchConfig.match ? !query.trim() || searchConfig.match(record, query) : matchesSearch(record, query, searchAccessors)),
-  );
+  const filteredData = server
+    ? (allData ?? [])
+    : applyFilters(Array.isArray(allData) ? allData : [], filters).filter(
+        (record) =>
+          !ownsSearch ||
+          (searchConfig.match ? !query.trim() || searchConfig.match(record, query) : matchesSearch(record, query, searchAccessors)),
+      );
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshRef = useRef<() => void | Promise<unknown>>(() => {});
@@ -300,37 +333,24 @@ export function DataTable<T extends BaseEntity>({
     }
   };
 
-  const [sortStatus, setSortStatus] = useState<DataTableSortStatus<T>>({
-    columnAccessor: defaultSort?.field ?? fields[0].id,
-    direction: defaultSort?.direction ?? "desc",
-  });
-
   const handleSortChange = (newSortStatus: DataTableSortStatus<T>) => {
     setSortStatus(newSortStatus);
+    pageState.setPage(1);
     if (onSortChange) {
       onSortChange(String(newSortStatus.columnAccessor), newSortStatus.direction);
     }
   };
 
-  const sortedData = sortData(
-    filteredData,
-    sortStatus.columnAccessor as keyof T,
-    sortStatus.direction,
-  );
+  const sortedData = server
+    ? filteredData
+    : sortData(filteredData, sortStatus.columnAccessor as keyof T, sortStatus.direction);
 
-  const [pageSize, setPageSize] = usePersistentState(
-    PAGE_SIZES[1],
-    "mantine-table-page-size",
-  );
-  const [page, setPage] = useState(1);
-
-  const pageCount = Math.max(1, Math.ceil(sortedData.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-
-  const handleRecordsPerPageChange = (size: number) => {
-    setPageSize(size);
-    setPage(1);
-  };
+  const totalRecords = server ? (paged.data?.total ?? 0) : sortedData.length;
+  const paging = pagingOf(pageState, totalRecords);
+  const pastTheEnd = server && !!paged.data && !paged.isPlaceholderData && pageState.page > paging.page;
+  useEffect(() => {
+    if (pastTheEnd) pageState.setPage(paging.page);
+  });
 
   const handleQueryChange = (value: string) => {
     if (searchConfig?.onChange) {
@@ -338,12 +358,14 @@ export function DataTable<T extends BaseEntity>({
     } else {
       setInternalQuery(value);
     }
-    setPage(1);
+    if (server) {
+      searchServer(value.trim());
+    } else {
+      pageState.setPage(1);
+    }
   };
 
-  const records = pagination
-    ? sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : sortedData;
+  const records = pagination && !server ? pageOf(sortedData, paging) : sortedData;
 
   const [pickedRecords, setSelectedRecords] = useState<T[]>([]);
   const selectedRecords = pickedRecords.flatMap((picked) => {
@@ -636,13 +658,13 @@ export function DataTable<T extends BaseEntity>({
         </Stack>
       )}
 
-      {!isLoading && nested && !isError && sortedData.length === 0 && (
+      {!isLoading && nested && !isError && totalRecords === 0 && (
         <Text size="sm" c="dimmed">
           {emptyText}
         </Text>
       )}
 
-      {!isLoading && (!isError || allData !== undefined) && !(nested && sortedData.length === 0) && (
+      {!isLoading && (!isError || allData !== undefined) && !(nested && totalRecords === 0) && (
         <>
           {!cardsOnly && (
           <Box {...(mobileCards ? { visibleFrom: "sm" } : {})}>
@@ -663,16 +685,8 @@ export function DataTable<T extends BaseEntity>({
                 onSelectedRecordsChange: setSelectedRecords,
                 ...(isRecordSelectable && { isRecordSelectable: (record: T) => isRecordSelectable(record) }),
               })}
-              {...(pagination &&
-                sortedData.length && {
-                  totalRecords: sortedData.length,
-                  recordsPerPage: pageSize,
-                  onPageChange: setPage,
-                  page: currentPage,
-                  recordsPerPageOptions: PAGE_SIZES,
-                  onRecordsPerPageChange: handleRecordsPerPageChange,
-                  recordsPerPageLabel: "Einträge pro Seite",
-                })}
+              {...(pagination && totalRecords > 0 && footerProps(paging))}
+              fetching={server && paged.isPlaceholderData}
               {...(rowExpansion && {
                 rowExpansion: {
                   allowMultiple: rowExpansion.allowMultiple ?? false,
@@ -713,16 +727,7 @@ export function DataTable<T extends BaseEntity>({
                     handleSortChange({ columnAccessor: field as keyof T, direction });
                   },
                 }}
-                {...(pagination && sortedData.length && {
-                  pagination: {
-                    totalRecords: sortedData.length,
-                    recordsPerPage: pageSize,
-                    page: currentPage,
-                    onPageChange: setPage,
-                    recordsPerPageOptions: PAGE_SIZES,
-                    onRecordsPerPageChange: handleRecordsPerPageChange,
-                  },
-                })}
+                {...(pagination && totalRecords > 0 && { pagination: paging })}
                 {...(rowExpansion && {
                   rowExpansion: {
                     content: rowExpansion.content,

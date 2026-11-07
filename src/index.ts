@@ -11,7 +11,18 @@ export {
   updateOne,
   useAddOne,
   getOne,
+  getPage,
+  useGetPage,
 } from "./Hooks/useApi";
+export type {
+  DataTablePagination,
+  Page,
+  PageRequest,
+  PagingOptions,
+  ServerPaging,
+  TablePagination,
+} from "./utils/pagination.ts";
+export { CardPagination } from "./DataTable/CardPagination.tsx";
 
 export type {
   DataTableProps,

@@ -8,16 +8,30 @@ import {
   getValueAtPath,
   humanize,
 } from "mantine-datatable";
+import { CardPagination } from "./CardPagination";
 import { FieldCard, FieldRow, FooterCard } from "./FieldCard";
 import { PageHeader } from "./PageHeader";
 import { RowActions, RowActionsMenu, RowActionsProps } from "./RowActions";
 import { hasRowActions } from "../utils/rowActions";
+import { footerProps, pageOf, PagingOptions, pagingOf, TablePagination } from "../utils/pagination";
+import { usePageState } from "../Hooks/usePageState";
 
 export type SubTableColumn<T> = DataTableColumn<T> & {
   hideOnMobile?: (record: T) => boolean;
 };
 
-export type SubTableProps<T> = Omit<MantineDataTableProps<T>, "columns"> & {
+export type SubTableProps<T> = Omit<
+  MantineDataTableProps<T>,
+  | "columns"
+  | "page"
+  | "onPageChange"
+  | "totalRecords"
+  | "recordsPerPage"
+  | "recordsPerPageOptions"
+  | "onRecordsPerPageChange"
+  | "recordsPerPageLabel"
+  | "paginationText"
+> & {
   mobile: boolean;
   columns: SubTableColumn<T>[];
   rowActions?: (record: T) => RowActionsProps;
@@ -25,7 +39,15 @@ export type SubTableProps<T> = Omit<MantineDataTableProps<T>, "columns"> & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * `true` or `PagingOptions` page the given records in the browser. A `TablePagination` shows the page the
+   * caller loaded from a server: the records are that page, `totalRecords` counts all of them.
+   */
+  pagination?: boolean | PagingOptions | TablePagination;
 };
+
+const isCallerPage = (pagination: SubTableProps<unknown>["pagination"]): pagination is TablePagination =>
+  typeof pagination === "object" && "totalRecords" in pagination;
 
 function CellValue<T>({
   render,
@@ -47,10 +69,16 @@ export function SubTable<T>({
   title,
   description,
   actions,
+  pagination,
   ...props
 }: SubTableProps<T>) {
-  const records = (props.records ?? []) as T[];
+  const given = (props.records ?? []) as T[];
   const variant = nested || !props.withTableBorder ? "nested" : "surface";
+  const callerPage = isCallerPage(pagination);
+  const pageState = usePageState(typeof pagination === "object" && !callerPage ? pagination : {});
+  const browserPaging = pagingOf(pageState, given.length);
+  const paging = callerPage ? pagination : pagination ? browserPaging : undefined;
+  const records = pagination && !callerPage ? pageOf(given, browserPaging) : given;
 
   const mobileCards = () => (
     <Stack gap="sm" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -83,6 +111,7 @@ export function SubTable<T>({
         );
       })}
       <FooterCard columns={columns} variant={variant} />
+      {paging && <CardPagination pagination={paging} />}
     </Stack>
   );
 
@@ -108,20 +137,22 @@ export function SubTable<T>({
         pinLastColumn={showsRowActions}
         {...(nested && { withTableBorder: true, borderRadius: "md", minHeight: 0 })}
         {...props}
+        records={records}
+        {...(paging && paging.totalRecords > 0 && footerProps(paging))}
       />
     );
   };
 
-  const content =
-    nested && records.length === 0 ? (
-      <Text size="sm" c="dimmed">
-        {props.noRecordsText ?? "Keine Einträge"}
-      </Text>
-    ) : mobile ? (
-      mobileCards()
-    ) : (
-      desktopTable()
-    );
+  const empty = given.length === 0 && (nested || mobile);
+  const content = empty ? (
+    <Text size="sm" c="dimmed" {...(!nested && { ta: "center", py: "xl" })}>
+      {props.noRecordsText ?? "Keine Einträge"}
+    </Text>
+  ) : mobile ? (
+    mobileCards()
+  ) : (
+    desktopTable()
+  );
 
   return title != null ? (
     <Stack gap="md">

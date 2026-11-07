@@ -1,11 +1,13 @@
-import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Pagination, Popover, Select, Stack, Text } from "@mantine/core";
+import { Accordion, ActionIcon, Box, Collapse, Divider, Group, Indicator, Popover, Select, Stack, Text } from "@mantine/core";
 import { BaseEntity } from "../Hooks/useApi";
 import { Field } from "./DataTable";
 import React, { useState } from "react";
 import { IconFilter, IconSortAscending, IconSortDescending } from "@tabler/icons-react";
+import { CardPagination } from "./CardPagination";
 import { FieldCardRows, FieldRow, FooterCard } from "./FieldCard";
 import { RowActionsMenu, RowActionsProps } from "./RowActions";
 import { hasRowActions } from "../utils/rowActions";
+import { TablePagination } from "../utils/pagination";
 
 interface SortConfig {
   field: string;
@@ -20,14 +22,7 @@ interface MobileCardListProps<T extends BaseEntity> {
   isRecordClickable?: (record: T) => boolean;
   cardActions?: (record: T) => RowActionsProps;
   noRecordsText?: string;
-  pagination?: {
-    totalRecords: number;
-    recordsPerPage: number;
-    page: number;
-    onPageChange: (page: number) => void;
-    recordsPerPageOptions?: number[];
-    onRecordsPerPageChange?: (size: number) => void;
-  };
+  pagination?: TablePagination;
   sort?: SortConfig;
   variant?: "surface" | "nested";
   rowExpansion?: {
@@ -250,31 +245,7 @@ export function MobileCardList<T extends BaseEntity>({
 
       {records.length > 0 && <FooterCard columns={listFields.map((field) => field.column)} variant={variant} />}
 
-      {pagination && pagination.totalRecords > pagination.recordsPerPage && (
-        <Stack gap="xs" mt="sm">
-          <Group justify="center">
-            <Pagination
-              total={Math.ceil(pagination.totalRecords / pagination.recordsPerPage)}
-              value={pagination.page}
-              onChange={pagination.onPageChange}
-              size="sm"
-            />
-          </Group>
-          {pagination.recordsPerPageOptions && pagination.onRecordsPerPageChange && (
-            <Group justify="center" gap="xs">
-              <Text fz="xs" c="dimmed">Einträge pro Seite:</Text>
-              <Select
-                data={pagination.recordsPerPageOptions.map((o) => ({ value: String(o), label: String(o) }))}
-                value={String(pagination.recordsPerPage)}
-                onChange={(v) => v && pagination.onRecordsPerPageChange!(Number(v))}
-                allowDeselect={false}
-                size="xs"
-                w={70}
-              />
-            </Group>
-          )}
-        </Stack>
-      )}
+      {pagination && <CardPagination pagination={pagination} />}
     </Stack>
   );
 }
