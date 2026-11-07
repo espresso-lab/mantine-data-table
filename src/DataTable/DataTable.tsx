@@ -102,7 +102,8 @@ export interface DataTableProps<T extends BaseEntity> {
   title?: string | React.ReactNode;
   titleOrder?: TitleOrder;
   titleHint?: React.ReactNode;
-  description?: React.ReactNode;
+  /** A function receives the count of all records the table pages through, the server's when it pages. */
+  description?: React.ReactNode | ((page: { totalRecords: number }) => React.ReactNode);
   breadcrumbs?: Crumb[];
   crumb?: React.ReactNode;
   entityName?: string;
@@ -600,7 +601,7 @@ export function DataTable<T extends BaseEntity>({
         <PageHeader
           title={title}
           order={titleOrder}
-          description={description}
+          description={typeof description === "function" ? (isLoading ? undefined : description({ totalRecords })) : description}
           breadcrumbs={breadcrumbs}
           crumb={crumb}
           hint={titleHint}

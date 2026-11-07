@@ -628,7 +628,7 @@ export default function App() {
           <DataTable<DemoItem>
             title="Benutzer"
             titleOrder={2}
-            description={`${demoApiRecords.length} Benutzer`}
+            description={({ totalRecords }) => `${totalRecords} Benutzer`}
             titleHint="Mit DataTableProvider und Mock-API. Selection, Pagination, mobileCards, Row Expansion und onRowClick folgen den Schaltern oben; inlineEdit setzt den Stift in die E-Mail-Spalte."
             entityName="Benutzer"
             recordLabel={(record) => record.name}

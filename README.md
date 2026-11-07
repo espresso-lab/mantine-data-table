@@ -133,7 +133,7 @@ A field describes both a table column and a form input.
 | Prop | Description |
 | --- | --- |
 | `title`, `titleOrder` | Heading of the table; `titleOrder={2}` when the table is the page (default `4`, a section). |
-| `description` | Dimmed line under the title — a figure such as „7 Objekte · 110 Einheiten". |
+| `description` | Dimmed line under the title — a figure such as „7 Objekte · 110 Einheiten". A function receives `{ totalRecords }`, all records the table pages through — with `server` the server's count: ``({ totalRecords }) => `${totalRecords} Kontakte` ``. |
 | `breadcrumbs`, `crumb` | Ancestors shown above a page-level title (`titleOrder` ≤ 2) and the current page's label when the title is no plain string (see *Breadcrumbs*). |
 | `titleHint` | Hover card behind an info icon next to the title. |
 | `entityName` | Singular noun of a record („Einheit"); names the create button („Einheit anlegen") and the dialogs („Einheit bearbeiten", „Einheit löschen?"). |
