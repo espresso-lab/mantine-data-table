@@ -1,4 +1,4 @@
-import { ActionIcon, Group, MantineColor, Menu, Tooltip } from "@mantine/core";
+import { ActionIcon, ActionIconProps, Group, MantineColor, Menu, Tooltip } from "@mantine/core";
 import { IconDots, IconPencil, IconTrash } from "@tabler/icons-react";
 import React, { useRef } from "react";
 import { hasRowActions } from "../utils/rowActions";
@@ -54,10 +54,18 @@ const deleteAction = (onDelete: () => void): RowAction => ({
 });
 
 /**
- * The ⋯ of a row or card. An item hands the focus back to the ⋯ before it runs, so a dialog it opens
- * returns the focus there instead of to an item that is gone once the menu has closed.
+ * The ⋯ of a row, a card or a list's header. An item hands the focus back to the ⋯ before it runs, so a dialog it
+ * opens returns the focus there instead of to an item that is gone once the menu has closed.
  */
-function ActionsMenu({ name, actions = [], onEdit, editLabel = "Bearbeiten", editIcon, onDelete }: RowActionsProps) {
+export function ActionsMenu({
+  name,
+  actions = [],
+  onEdit,
+  editLabel = "Bearbeiten",
+  editIcon,
+  onDelete,
+  size,
+}: RowActionsProps & { size?: ActionIconProps["size"] }) {
   const target = useRef<HTMLButtonElement>(null);
   const regular = actions.filter((action) => !isDestructive(action));
   const destructive = [...actions.filter(isDestructive), ...(onDelete ? [deleteAction(onDelete)] : [])];
@@ -81,7 +89,7 @@ function ActionsMenu({ name, actions = [], onEdit, editLabel = "Bearbeiten", edi
     <Menu>
       <Menu.Target>
         <Tooltip label="Weitere Aktionen">
-          <ActionIcon ref={target} variant="subtle" color="gray" aria-label={describe("Weitere Aktionen", name)}>
+          <ActionIcon ref={target} variant="subtle" color="gray" size={size} aria-label={describe("Weitere Aktionen", name)}>
             <IconDots size={16} />
           </ActionIcon>
         </Tooltip>

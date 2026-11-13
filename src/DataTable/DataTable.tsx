@@ -32,7 +32,7 @@ import { closeOnOwnEscape } from "../utils/escape";
 import { MobileCardList } from "./MobileCardList";
 import { PageHeader } from "./PageHeader";
 import { Crumb } from "./breadcrumbContext";
-import { RowAction, RowActions } from "./RowActions";
+import { ActionsMenu, RowAction, RowActions } from "./RowActions";
 import { SearchInput } from "./SearchInput";
 import { hasRowActions } from "../utils/rowActions";
 
@@ -117,6 +117,8 @@ export interface DataTableProps<T extends BaseEntity> {
   search?: boolean | SearchConfig<T>;
   toolbar?: React.ReactNode;
   buttons?: React.ReactNode[];
+  /** Rare actions on the whole list: the ⋯ „Weitere Aktionen“, last in the header, after the create button. */
+  moreActions?: RowAction[];
   topContent?: React.ReactNode;
   createButtonText?: string;
   actions?: Action<T>[];
@@ -184,6 +186,7 @@ export function DataTable<T extends BaseEntity>({
   apiPath,
   mutationApiPath,
   buttons,
+  moreActions = [],
   topContent,
   fields,
   selection,
@@ -585,6 +588,7 @@ export function DataTable<T extends BaseEntity>({
           {createButtonText ?? `${singular} ${createVerb}`}
         </Button>
       )}
+      {moreActions.length > 0 && <ActionsMenu actions={moreActions} size={nested ? undefined : "input-sm"} />}
     </>
   );
 

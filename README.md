@@ -105,8 +105,8 @@ export function Users() {
 ```
 
 The table renders the whole list scaffold: the header (title, description, refresh, your `buttons`,
-the bulk menu once rows are selected, and the create button „Benutzer anlegen" at the right end), a
-toolbar with the search field and your `toolbar` controls, and the table. Every row ends with its
+the bulk menu once rows are selected, the create button „Benutzer anlegen" and, last, the ⋯ of your
+`moreActions`), a toolbar with the search field and your `toolbar` controls, and the table. Every row ends with its
 actions — further `rowActions`, then *Bearbeiten*, then *Löschen* (red, always last); on phones they
 move into the card's ⋯ menu. A table whose rows have no action at all gets no actions column. The
 actions column stays pinned to the right edge while a wide table
@@ -142,6 +142,7 @@ A field describes both a table column and a form input.
 | `toolbar` | Filter controls rendered after the search field (object select, segmented filter, switches). |
 | `buttons` | Secondary header buttons, left of the create button. |
 | `createButtonText` | Overrides „‹entityName› anlegen". |
+| `moreActions` | `RowAction[]` — rare actions on the whole list („Sicherung einlesen …“) in the ⋯ „Weitere Aktionen“, last in the header after the create button; a red one goes behind a divider. |
 | `nested` | The table is a list inside an open record (an expanded row, a dialog): the create button becomes the light „‹entityName› hinzufügen", its dialog says „hinzufügen" too, the refresh icon and the phone sort control are left out, phone cards are tinted and an empty list is one dimmed line. |
 | `editAction` | `(record) => ({ label, icon })` — relabels *Bearbeiten* per row. A value typed in over a calculated one shows it here: `IconPencilCheck` with „Manuell überschrieben – bearbeiten". |
 | `onUpdate` | `(values, record) => Promise` — saves the edit dialog yourself instead of `PUT apiPath/{id}`; the dialog starts from the row instead of fetching the record. |
